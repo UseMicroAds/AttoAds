@@ -1,0 +1,3 @@
+api: /bin/api
+discovery: /bin/discovery
+verifier: /bin/verifier
