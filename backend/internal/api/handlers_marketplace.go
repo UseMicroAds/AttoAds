@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -19,6 +20,19 @@ type MarketplaceHandlers struct {
 	YTClient *ytclient.Client
 }
 
+type MarketplaceCommentResponse struct {
+	ID                uuid.UUID            `json:"id"`
+	VideoID           string               `json:"video_id"`
+	CommentID         string               `json:"comment_id"`
+	AuthorChannelID   string               `json:"author_channel_id"`
+	AuthorDisplayName string               `json:"author_display_name"`
+	OriginalText      string               `json:"original_text"`
+	LikeCount         int                  `json:"like_count"`
+	Velocity          float64              `json:"velocity"`
+	Status            models.CommentStatus `json:"status"`
+	FirstSeen         time.Time            `json:"first_seen"`
+}
+
 func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
@@ -29,8 +43,46 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 		offset = 0
 	}
 
-	comments, err := h.Store.ListAvailableComments(r.Context(), limit, offset)
+	rows, err := h.Store.Pool.Query(
+		r.Context(),
+		`SELECT vc.id, tv.video_id, vc.comment_id, vc.author_channel_id, vc.author_display_name,
+		        vc.original_text, vc.like_count, vc.velocity, vc.status, vc.first_seen
+		 FROM viral_comments vc
+		 JOIN trending_videos tv ON tv.id = vc.video_id
+		 WHERE vc.status = 'available'
+		 ORDER BY vc.velocity DESC
+		 LIMIT $1 OFFSET $2`,
+		limit,
+		offset,
+	)
 	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to list comments")
+		return
+	}
+	defer rows.Close()
+
+	comments := make([]MarketplaceCommentResponse, 0, limit)
+	for rows.Next() {
+		var c MarketplaceCommentResponse
+		if err := rows.Scan(
+			&c.ID,
+			&c.VideoID,
+			&c.CommentID,
+			&c.AuthorChannelID,
+			&c.AuthorDisplayName,
+			&c.OriginalText,
+			&c.LikeCount,
+			&c.Velocity,
+			&c.Status,
+			&c.FirstSeen,
+		); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list comments")
+			return
+		}
+		comments = append(comments, c)
+	}
+
+	if err := rows.Err(); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list comments")
 		return
 	}
