@@ -47,6 +47,27 @@ export const api = {
   getComment: (id: string) =>
     request<ViralComment>(`/api/marketplace/comments/${id}`),
 
+  listCommentsByChannel: (channelId: string) =>
+    request<ViralComment[]>(
+      `/api/marketplace/comments/by-channel/${encodeURIComponent(channelId)}`
+    ),
+
+  listAllCommentsByChannel: (channelId: string) =>
+    request<ChannelAuthoredComment[]>(
+      `/api/marketplace/comments/by-channel/${encodeURIComponent(channelId)}/all`
+    ),
+
+  listAllCommentsByVideo: (videoId: string) =>
+    request<ChannelAuthoredComment[]>(
+      `/api/marketplace/comments/by-video/${encodeURIComponent(videoId)}/all`
+    ),
+
+  registerCommentForTesting: (data: RegisterCommentForTestingInput) =>
+    request<ViralComment>("/api/marketplace/comments/register-test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   listTrendingVideos: (limit = 20) =>
     request<TrendingVideo[]>(`/api/marketplace/videos?limit=${limit}`),
 
@@ -149,6 +170,17 @@ export interface Deal {
   created_at: string;
 }
 
+export interface ChannelAuthoredComment {
+  comment_id: string;
+  video_id: string;
+  author_channel_id: string;
+  author_display_name: string;
+  text: string;
+  like_count: number;
+  marketplace_comment_id?: string;
+  marketplace_status?: ViralComment["status"];
+}
+
 export interface Transaction {
   id: string;
   deal_id: string;
@@ -162,4 +194,13 @@ export interface CreateCampaignInput {
   ad_text: string;
   budget_cents: number;
   price_per_placement: number;
+}
+
+export interface RegisterCommentForTestingInput {
+  comment_id: string;
+  video_id: string;
+  author_channel_id: string;
+  author_display_name: string;
+  text: string;
+  like_count: number;
 }

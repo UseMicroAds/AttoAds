@@ -1,7 +1,14 @@
-import { http, createConfig } from "wagmi";
+import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { http } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 
-export const config = createConfig({
+const walletConnectProjectId =
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
+
+export const config = getDefaultConfig({
+  appName: "MicroAds",
+  projectId: walletConnectProjectId,
+  ssr: true,
   chains: [baseSepolia],
   transports: {
     [baseSepolia.id]: http(),

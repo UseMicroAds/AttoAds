@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseUnits, encodeFunctionData, stringToHex, padHex } from "viem";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { parseUnits, stringToHex, keccak256 } from "viem";
+import { baseSepolia } from "wagmi/chains";
 import { api, type Campaign, type Deal } from "@/lib/api";
 import { USDC_ADDRESS_BASE_SEPOLIA, USDC_ABI, ESCROW_ADDRESS, ESCROW_ABI } from "@/lib/wagmi";
 import { Button } from "@/components/ui/button";
@@ -30,13 +36,16 @@ export default function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { isConnected } = useAccount();
+  const { isConnected, chainId } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const [lastFundedTxHash, setLastFundedTxHash] = useState<string | null>(null);
 
-  const { writeContract: approveUSDC, data: approveHash } = useWriteContract();
-  const { writeContract: depositEscrow, data: depositHash } = useWriteContract();
+  const { writeContractAsync: approveUSDC, data: approveHash } = useWriteContract();
+  const { writeContractAsync: depositEscrow, data: depositHash } = useWriteContract();
 
   const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
     hash: approveHash,
@@ -61,39 +70,90 @@ export default function CampaignDetailPage({
         (campaign.budget_cents / 100).toString(),
         6
       );
-      const campaignIdBytes = padHex(stringToHex(campaign.id), { size: 32 });
+      const campaignIdBytes = keccak256(stringToHex(campaign.id));
 
       depositEscrow({
         address: ESCROW_ADDRESS as `0x${string}`,
         abi: ESCROW_ABI,
         functionName: "deposit",
         args: [campaignIdBytes, amount],
+      }).catch((err) => {
+        setWalletError(
+          err instanceof Error ? err.message : "Failed to deposit to escrow"
+        );
       });
     }
   }, [approveConfirmed, campaign, depositEscrow]);
 
   useEffect(() => {
-    if (depositConfirmed && depositHash && campaign) {
-      api.fundCampaign(campaign.id, depositHash).then(() => {
-        api.getCampaign(id).then(setCampaign);
-      });
+    if (
+      depositConfirmed &&
+      depositHash &&
+      campaign &&
+      campaign.status === "draft" &&
+      lastFundedTxHash !== depositHash
+    ) {
+      setLastFundedTxHash(depositHash);
+      api
+        .fundCampaign(campaign.id, depositHash)
+        .then(() => {
+          api.getCampaign(id).then(setCampaign);
+        })
+        .catch((err) => {
+          // If backend already switched status, treat it as success and refresh.
+          if (err instanceof Error && err.message.includes("already funded")) {
+            api.getCampaign(id).then(setCampaign);
+            return;
+          }
+          setWalletError(
+            err instanceof Error ? err.message : "Failed to mark campaign as funded"
+          );
+        });
     }
-  }, [depositConfirmed, depositHash, campaign, id]);
+  }, [depositConfirmed, depositHash, campaign, id, lastFundedTxHash]);
 
-  const handleFund = () => {
-    if (!campaign || !isConnected) return;
+  const handleFund = async () => {
+    if (!campaign) return;
+    setWalletError(null);
+
+    if (!ESCROW_ADDRESS || !/^0x[a-fA-F0-9]{40}$/.test(ESCROW_ADDRESS)) {
+      setWalletError(
+        "Escrow contract is not configured. Set NEXT_PUBLIC_ESCROW_CONTRACT in frontend/.env.local and restart the frontend."
+      );
+      return;
+    }
+
+    if (!isConnected) {
+      if (!openConnectModal) {
+        setWalletError("Wallet connect modal is unavailable");
+        return;
+      }
+      openConnectModal();
+      return;
+    }
+
+    if (chainId !== baseSepolia.id) {
+      setWalletError("Please switch your wallet network to Base Sepolia.");
+      return;
+    }
 
     const amount = parseUnits(
       (campaign.budget_cents / 100).toString(),
       6
     );
 
-    approveUSDC({
-      address: USDC_ADDRESS_BASE_SEPOLIA as `0x${string}`,
-      abi: USDC_ABI,
-      functionName: "approve",
-      args: [ESCROW_ADDRESS as `0x${string}`, amount],
-    });
+    try {
+      await approveUSDC({
+        address: USDC_ADDRESS_BASE_SEPOLIA as `0x${string}`,
+        abi: USDC_ABI,
+        functionName: "approve",
+        args: [ESCROW_ADDRESS as `0x${string}`, amount],
+      });
+    } catch (err) {
+      setWalletError(
+        err instanceof Error ? err.message : "Failed to approve USDC"
+      );
+    }
   };
 
   if (loading || !campaign) {
@@ -151,7 +211,6 @@ export default function CampaignDetailPage({
                 </p>
                 <Button
                   onClick={handleFund}
-                  disabled={!isConnected}
                   size="lg"
                 >
                   {!isConnected
@@ -162,6 +221,9 @@ export default function CampaignDetailPage({
                     ? "Depositing..."
                     : `Fund $${(campaign.budget_cents / 100).toFixed(2)} USDC`}
                 </Button>
+                {walletError && (
+                  <p className="mt-2 text-xs text-destructive">{walletError}</p>
+                )}
               </div>
             </>
           )}

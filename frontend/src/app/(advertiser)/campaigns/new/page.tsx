@@ -94,7 +94,6 @@ export default function NewCampaignPage() {
                 <Input
                   type="number"
                   step="0.01"
-                  min="0.50"
                   placeholder="5.00"
                   value={pricePerPlacement}
                   onChange={(e) => setPricePerPlacement(e.target.value)}

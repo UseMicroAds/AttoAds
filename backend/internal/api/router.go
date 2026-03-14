@@ -9,10 +9,11 @@ import (
 	"github.com/microads/microads-backend/internal/auth"
 	"github.com/microads/microads-backend/internal/db"
 	"github.com/microads/microads-backend/internal/models"
+	ytclient "github.com/microads/microads-backend/internal/youtube"
 	"golang.org/x/oauth2"
 )
 
-func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config) *chi.Mux {
+func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclient.Client) *chi.Mux {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -29,7 +30,7 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config) *chi.Mux {
 
 	authH := &AuthHandlers{Store: store, OAuthConfig: oauthCfg, JWTSecret: cfg.JWTSecret}
 	campaignH := &CampaignHandlers{Store: store}
-	marketplaceH := &MarketplaceHandlers{Store: store}
+	marketplaceH := &MarketplaceHandlers{Store: store, YTClient: yt}
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
@@ -40,17 +41,20 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config) *chi.Mux {
 		r.Get("/auth/google", authH.GoogleLogin)
 		r.Post("/auth/google/callback", authH.GoogleCallback)
 
+		// Public marketplace read routes
+		r.Get("/marketplace/comments", marketplaceH.ListComments)
+		r.Get("/marketplace/comments/by-video/{videoID}/all", marketplaceH.ListAllCommentsByVideo)
+		r.Get("/marketplace/comments/by-channel/{channelID}/all", marketplaceH.ListAllCommentsByAuthorChannel)
+		r.Get("/marketplace/comments/by-channel/{channelID}", marketplaceH.ListCommentsByAuthorChannel)
+		r.Get("/marketplace/comments/{id}", marketplaceH.GetComment)
+		r.Get("/marketplace/videos", marketplaceH.ListTrendingVideos)
+
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware(cfg.JWTSecret))
 
 			r.Get("/me", authH.GetMe)
 			r.Post("/wallet/link", authH.LinkWallet)
-
-			// Marketplace (read)
-			r.Get("/marketplace/comments", marketplaceH.ListComments)
-			r.Get("/marketplace/comments/{id}", marketplaceH.GetComment)
-			r.Get("/marketplace/videos", marketplaceH.ListTrendingVideos)
 
 			// Advertiser routes
 			r.Group(func(r chi.Router) {
@@ -62,6 +66,7 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config) *chi.Mux {
 				r.Post("/campaigns/{id}/fund", campaignH.Fund)
 				r.Get("/campaigns/{id}/deals", campaignH.ListDeals)
 				r.Post("/deals", marketplaceH.CreateDeal)
+				r.Post("/marketplace/comments/register-test", marketplaceH.RegisterCommentForTesting)
 			})
 
 			// Commenter routes
