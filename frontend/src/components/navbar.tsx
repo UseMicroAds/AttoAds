@@ -29,6 +29,12 @@ export function Navbar() {
           >
             Marketplace
           </Link>
+          <Link
+            href="/test/my-comments"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Test Comments
+          </Link>
           {user?.role === "advertiser" && (
             <Link
               href="/campaigns"
@@ -75,6 +81,9 @@ export function Navbar() {
                     <Link href="/campaigns">Campaigns</Link>
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem>
+                  <Link href="/test/my-comments">Test Comments</Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
               </DropdownMenuContent>

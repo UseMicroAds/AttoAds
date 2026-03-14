@@ -13,6 +13,7 @@ import (
 	"github.com/microads/microads-backend/internal/api"
 	"github.com/microads/microads-backend/internal/auth"
 	"github.com/microads/microads-backend/internal/db"
+	"github.com/microads/microads-backend/internal/youtube"
 )
 
 func main() {
@@ -38,7 +39,8 @@ func main() {
 	defer store.Close()
 
 	oauthCfg := auth.NewGoogleOAuthConfig(cfg.GoogleClientID, cfg.GoogleSecret, cfg.GoogleRedirect)
-	router := api.NewRouter(store, cfg, oauthCfg)
+	ytClient := youtube.NewClient(cfg.YouTubeAPIKey)
+	router := api.NewRouter(store, cfg, oauthCfg, ytClient)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

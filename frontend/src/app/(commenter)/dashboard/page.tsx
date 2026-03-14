@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type ViralComment, type Deal, type Transaction } from "@/lib/api";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useAccount } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,8 +27,7 @@ import {
 export default function CommenterDashboard() {
   const { user, wallet, channel, refresh } = useAuth();
   const { address, isConnected } = useAccount();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { openConnectModal } = useConnectModal();
 
   const [comments, setComments] = useState<ViralComment[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -47,7 +46,7 @@ export default function CommenterDashboard() {
       await api.linkWallet(address);
       refresh();
     } else {
-      connect({ connector: injected() });
+      openConnectModal?.();
     }
   };
 

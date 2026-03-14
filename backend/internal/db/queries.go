@@ -213,6 +213,19 @@ func (s *Store) GetViralCommentByID(ctx context.Context, id uuid.UUID) (*models.
 	return vc, nil
 }
 
+func (s *Store) GetViralCommentByCommentID(ctx context.Context, commentID string) (*models.ViralComment, error) {
+	vc := &models.ViralComment{}
+	err := s.Pool.QueryRow(ctx,
+		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
+		 FROM viral_comments WHERE comment_id = $1`, commentID,
+	).Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
+		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+	if err != nil {
+		return nil, err
+	}
+	return vc, nil
+}
+
 func (s *Store) ListCommentsByAuthorChannel(ctx context.Context, authorChannelID string) ([]models.ViralComment, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
