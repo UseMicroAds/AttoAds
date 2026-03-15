@@ -98,7 +98,7 @@ func (s *Store) UpsertWallet(ctx context.Context, userID uuid.UUID, address, cha
 	w := &models.Wallet{}
 	err := s.Pool.QueryRow(ctx,
 		`INSERT INTO wallets (user_id, address, chain) VALUES ($1, $2, $3)
-		 ON CONFLICT (address) DO UPDATE SET user_id = EXCLUDED.user_id, chain = EXCLUDED.chain
+		 ON CONFLICT (user_id) DO UPDATE SET address = EXCLUDED.address, chain = EXCLUDED.chain
 		 RETURNING id, user_id, address, chain, created_at`,
 		userID, address, chain,
 	).Scan(&w.ID, &w.UserID, &w.Address, &w.Chain, &w.CreatedAt)
@@ -361,7 +361,7 @@ func (s *Store) ListDealsByCommenter(ctx context.Context, commenterID uuid.UUID)
 func (s *Store) ListPendingDeals(ctx context.Context) ([]models.Deal, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT id, campaign_id, comment_id, commenter_id, status, created_at, updated_at
-		 FROM deals WHERE status IN ('pending', 'edit_pending') ORDER BY created_at ASC`)
+		 FROM deals WHERE status IN ('pending', 'edit_pending', 'verified') ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -400,6 +400,24 @@ func (s *Store) CreateTransaction(ctx context.Context, dealID uuid.UUID, txHash 
 	return t, nil
 }
 
+func (s *Store) UpsertTransaction(ctx context.Context, dealID uuid.UUID, txHash string, amountUSDC int, status models.TxStatus) (*models.Transaction, error) {
+	t := &models.Transaction{}
+	err := s.Pool.QueryRow(ctx,
+		`INSERT INTO transactions (deal_id, tx_hash, amount_usdc, status) VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (deal_id) DO UPDATE SET
+		   tx_hash = EXCLUDED.tx_hash,
+		   amount_usdc = EXCLUDED.amount_usdc,
+		   status = EXCLUDED.status,
+		   updated_at = now()
+		 RETURNING id, deal_id, tx_hash, amount_usdc, status, created_at, updated_at`,
+		dealID, txHash, amountUSDC, status,
+	).Scan(&t.ID, &t.DealID, &t.TxHash, &t.AmountUSDC, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
+}
+
 func (s *Store) UpdateTransactionStatus(ctx context.Context, id uuid.UUID, status models.TxStatus) error {
 	_, err := s.Pool.Exec(ctx,
 		`UPDATE transactions SET status = $1, updated_at = now() WHERE id = $2`, status, id)
@@ -425,6 +443,24 @@ func (s *Store) ListTransactionsByCommenter(ctx context.Context, commenterID uui
 		 JOIN deals d ON d.id = t.deal_id
 		 WHERE d.commenter_id = $1
 		 ORDER BY t.created_at DESC`, commenterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Transaction, error) {
+		var t models.Transaction
+		err := row.Scan(&t.ID, &t.DealID, &t.TxHash, &t.AmountUSDC, &t.Status, &t.CreatedAt, &t.UpdatedAt)
+		return t, err
+	})
+}
+
+func (s *Store) ListPendingTransactions(ctx context.Context, limit int) ([]models.Transaction, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, deal_id, tx_hash, amount_usdc, status, created_at, updated_at
+		 FROM transactions
+		 WHERE status = 'pending'
+		 ORDER BY created_at ASC
+		 LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}

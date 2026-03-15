@@ -86,9 +86,12 @@ export default function MyCommentsTestPage() {
   }, [videoId]);
 
   const filteredComments = useMemo(() => {
-    if (!signedInChannelId) return comments;
-    return comments.filter((comment) => comment.author_channel_id === filterChannelId);
-  }, [comments, signedInChannelId]);
+    // Keep advertiser test flow broad; only commenters are constrained to their own channel.
+    if (user?.role !== "commenter" || !signedInChannelId) return comments;
+    return comments.filter(
+      (comment) => comment.author_channel_id === signedInChannelId
+    );
+  }, [comments, signedInChannelId, user?.role]);
 
   const handleSearch = () => {
     const next = videoId.trim();
@@ -121,10 +124,19 @@ export default function MyCommentsTestPage() {
       }
 
       await api.createDeal(selectedCampaignId, marketplaceCommentID);
+      setComments((prev) =>
+        prev.map((row) =>
+          row.comment_id === comment.comment_id
+            ? {
+                ...row,
+                marketplace_comment_id: marketplaceCommentID,
+              }
+            : row
+        )
+      );
       setDealMessage(
         "Deal created. The verifier worker will edit the comment and release payment after verification."
       );
-      fetchComments(videoId);
     } catch (err) {
       setDealMessage(
         err instanceof Error ? err.message : "Failed to create deal"
