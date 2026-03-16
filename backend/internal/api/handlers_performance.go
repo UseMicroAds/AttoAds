@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -48,7 +49,7 @@ func (h *PerformanceHandlers) ListDeals(w http.ResponseWriter, r *http.Request) 
 		o := DealPerformanceRow{
 			ID:           d.ID.String(),
 			Status:       string(d.Status),
-			CreatedAt:    d.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+			CreatedAt:    d.CreatedAt.Format(time.RFC3339),
 			CommentLink:  link,
 			OriginalText: row.OriginalText,
 			LikeCount:    row.LikeCount,
@@ -63,7 +64,7 @@ func (h *PerformanceHandlers) ListDeals(w http.ResponseWriter, r *http.Request) 
 			o.BountyID = &s
 		}
 		if d.EditedAt != nil {
-			s := d.EditedAt.Format("2006-01-02T15:04:05Z07:00")
+			s := d.EditedAt.Format(time.RFC3339)
 			o.EditedAt = &s
 		}
 		out = append(out, o)
