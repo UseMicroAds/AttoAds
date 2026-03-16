@@ -119,7 +119,7 @@ func (h *PerformanceHandlers) GetDealPerformance(w http.ResponseWriter, r *http.
 	row := DealPerformanceRow{
 		ID:           d.ID.String(),
 		Status:       string(d.Status),
-		CreatedAt:    d.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+		CreatedAt:    d.CreatedAt.Format(time.RFC3339),
 		CommentLink:  link,
 		OriginalText: found.OriginalText,
 		LikeCount:    found.LikeCount,
@@ -134,14 +134,14 @@ func (h *PerformanceHandlers) GetDealPerformance(w http.ResponseWriter, r *http.
 		row.BountyID = &s
 	}
 	if d.EditedAt != nil {
-		s := d.EditedAt.Format("2006-01-02T15:04:05Z07:00")
+		s := d.EditedAt.Format(time.RFC3339)
 		row.EditedAt = &s
 	}
 
 	points := make([]DealMetricPoint, 0, len(metrics))
 	for _, m := range metrics {
 		points = append(points, DealMetricPoint{
-			CapturedAt: m.CapturedAt.Format("2006-01-02T15:04:05Z07:00"),
+			CapturedAt: m.CapturedAt.Format(time.RFC3339),
 			LikeCount:  m.LikeCount,
 			Velocity:   m.Velocity,
 		})
