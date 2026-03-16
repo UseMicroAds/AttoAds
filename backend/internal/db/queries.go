@@ -628,6 +628,26 @@ func (s *Store) GetDealCommentMetrics(ctx context.Context, dealID uuid.UUID) ([]
 	})
 }
 
+// ListDealsForMetricsPolling returns deals whose comment has been edited (edit_pending, verified, paid) for the performance metrics worker.
+func (s *Store) ListDealsForMetricsPolling(ctx context.Context) ([]models.Deal, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, edited_at, created_at, updated_at
+		 FROM deals WHERE status IN ('edit_pending', 'verified', 'paid') ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, scanDeal)
+}
+
+// UpdateViralCommentLikesAndVelocity updates like_count, prev_like_count, velocity, and last_polled for the performance poller.
+func (s *Store) UpdateViralCommentLikesAndVelocity(ctx context.Context, viralCommentID uuid.UUID, newLikeCount int, velocity float64) error {
+	_, err := s.Pool.Exec(ctx,
+		`UPDATE viral_comments SET prev_like_count = like_count, like_count = $1, velocity = $2, last_polled = now() WHERE id = $3`,
+		newLikeCount, velocity, viralCommentID)
+	return err
+}
+
 // --- Transactions ---
 
 func (s *Store) CreateTransaction(ctx context.Context, dealID uuid.UUID, txHash string, amountUSDC int) (*models.Transaction, error) {

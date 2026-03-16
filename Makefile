@@ -1,5 +1,5 @@
 .PHONY: help start stop restart env install infra-up infra-down migrate-up migrate-down \
-	api discovery verifier frontend dev dev-api dev-discovery dev-verifier dev-frontend \
+	api discovery verifier performance frontend dev dev-api dev-discovery dev-verifier dev-performance dev-frontend \
 	build-backend test-backend test-frontend test-contracts fmt-backend
 
 SHELL := /bin/bash
@@ -23,6 +23,7 @@ help:
 	@echo "  make api              Run Go API"
 	@echo "  make discovery        Run discovery worker"
 	@echo "  make verifier         Run verifier worker"
+	@echo "  make performance      Run performance metrics worker"
 	@echo "  make frontend         Run Next.js frontend"
 	@echo ""
 	@echo "Database:"
@@ -77,12 +78,16 @@ discovery:
 verifier:
 	@cd backend && go run ./cmd/verifier
 
+performance:
+	@cd backend && go run ./cmd/performance
+
 frontend:
 	@cd frontend && npm run dev
 
 dev-api: api
 dev-discovery: discovery
 dev-verifier: verifier
+dev-performance: performance
 dev-frontend: frontend
 
 dev:
@@ -90,6 +95,7 @@ dev:
 	( cd backend && go run ./cmd/api ) & \
 	( cd backend && go run ./cmd/discovery ) & \
 	( cd backend && go run ./cmd/verifier ) & \
+	( cd backend && go run ./cmd/performance ) & \
 	( cd frontend && npm run dev ) & \
 	wait
 

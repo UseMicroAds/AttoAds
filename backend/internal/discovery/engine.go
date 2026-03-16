@@ -111,12 +111,7 @@ func (e *Engine) poll(ctx context.Context) {
 				continue
 			}
 
-			velocity := e.calculateVelocity(ctx, vc)
-			// Record metrics for deals so advertisers can see performance over time
-			dealIDs, _ := e.store.ListDealIDsByViralCommentID(ctx, vc.ID)
-			for _, dealID := range dealIDs {
-				_ = e.store.InsertDealCommentMetric(ctx, dealID, vc.LikeCount, velocity)
-			}
+			_ = e.calculateVelocity(ctx, vc)
 		}
 	}
 
