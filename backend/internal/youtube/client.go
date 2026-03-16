@@ -495,6 +495,22 @@ func (c *Client) FetchCommentText(ctx context.Context, commentID string) (string
 	return resp.Items[0].Snippet.TextDisplay, nil
 }
 
+// FetchCommentLikeCount returns the current like count for a comment (for deal performance metrics).
+func (c *Client) FetchCommentLikeCount(ctx context.Context, commentID string) (int64, error) {
+	svc, err := yt.NewService(ctx, option.WithAPIKey(c.apiKey))
+	if err != nil {
+		return 0, fmt.Errorf("create youtube service: %w", err)
+	}
+	resp, err := svc.Comments.List([]string{"snippet"}).Id(commentID).Do()
+	if err != nil {
+		return 0, fmt.Errorf("fetch comment %s: %w", commentID, err)
+	}
+	if len(resp.Items) == 0 {
+		return 0, fmt.Errorf("comment %s not found", commentID)
+	}
+	return resp.Items[0].Snippet.LikeCount, nil
+}
+
 func (c *Client) UpdateComment(ctx context.Context, token *oauth2.Token, oauthCfg *oauth2.Config, commentID, newText string) error {
 	svc, err := yt.NewService(ctx, option.WithTokenSource(oauthCfg.TokenSource(ctx, token)))
 	if err != nil {

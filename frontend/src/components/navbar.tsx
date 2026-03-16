@@ -49,6 +49,12 @@ export function Navbar() {
               >
                 Bounties
               </Link>
+              <Link
+                href="/performance"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Performance
+              </Link>
             </>
           )}
           {user?.role === "commenter" && (
@@ -104,6 +110,9 @@ export function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Link href="/bounties">Bounties</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Link href="/performance">Performance</Link>
                     </DropdownMenuItem>
                   </>
                 )}

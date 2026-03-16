@@ -120,6 +120,12 @@ export const api = {
   listBountyDeals: (id: string) =>
     request<Deal[]>(`/api/bounties/${id}/deals`),
 
+  // Performance (advertiser)
+  listDealsPerformance: () =>
+    request<DealPerformanceRow[]>("/api/deals/performance"),
+  getDealPerformance: (id: string) =>
+    request<DealPerformanceResponse>(`/api/deals/${id}/performance`),
+
   // Bounties (commenter - hunt)
   listActiveBounties: () => request<Bounty[]>("/api/bounties/active"),
 
@@ -228,6 +234,30 @@ export interface Deal {
   commenter_id: string;
   status: "pending" | "edit_pending" | "verified" | "paid" | "failed";
   created_at: string;
+}
+
+export interface DealPerformanceRow {
+  id: string;
+  campaign_id?: string;
+  bounty_id?: string;
+  status: string;
+  edited_at?: string;
+  created_at: string;
+  comment_link: string;
+  original_text: string;
+  like_count: number;
+  velocity: number;
+}
+
+export interface DealMetricPoint {
+  captured_at: string;
+  like_count: number;
+  velocity: number;
+}
+
+export interface DealPerformanceResponse {
+  deal: DealPerformanceRow;
+  metrics: DealMetricPoint[];
 }
 
 export interface ChannelAuthoredComment {
