@@ -118,8 +118,14 @@ func (w *Worker) editComment(ctx context.Context, deal models.Deal) {
 	}
 
 	slog.Info("verifier: comment edited", "deal_id", deal.ID, "comment_id", comment.CommentID)
-	_ = w.store.UpdateDealStatus(ctx, deal.ID, models.DealEditPending)
-	_ = w.store.InsertDealCommentMetric(ctx, deal.ID, comment.LikeCount, comment.Velocity)
+	if err := w.store.UpdateDealStatus(ctx, deal.ID, models.DealEditPending); err != nil {
+		slog.Error("verifier: failed to update deal status to edit pending", "deal_id", deal.ID, "error", err)
+		return
+	}
+	if err := w.store.InsertDealCommentMetric(ctx, deal.ID, comment.LikeCount, comment.Velocity); err != nil {
+		slog.Error("verifier: failed to insert deal comment metric", "deal_id", deal.ID, "error", err)
+		return
+	}
 }
 
 func (w *Worker) verifyComment(ctx context.Context, deal models.Deal) {
