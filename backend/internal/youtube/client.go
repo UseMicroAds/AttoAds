@@ -23,6 +23,7 @@ type TrendingVideo struct {
 	ChannelTitle string
 	ThumbnailURL string
 	ViewCount    uint64
+	CategoryID   string // YouTube snippet.categoryId (e.g. "28" for Science & Technology)
 }
 
 type Comment struct {
@@ -55,15 +56,40 @@ func (c *Client) FetchTrendingVideos(ctx context.Context, regionCode string, max
 		if item.Snippet.Thumbnails != nil && item.Snippet.Thumbnails.Medium != nil {
 			thumb = item.Snippet.Thumbnails.Medium.Url
 		}
+		categoryID := ""
+		if item.Snippet != nil {
+			categoryID = item.Snippet.CategoryId
+		}
 		videos = append(videos, TrendingVideo{
 			VideoID:      item.Id,
 			Title:        item.Snippet.Title,
 			ChannelTitle: item.Snippet.ChannelTitle,
 			ThumbnailURL: thumb,
 			ViewCount:    item.Statistics.ViewCount,
+			CategoryID:   categoryID,
 		})
 	}
 	return videos, nil
+}
+
+// FetchVideoCategoryTitles returns a map of category ID -> title for the region.
+// Used to resolve video snippet.categoryId to a human-readable name for discovery.
+func (c *Client) FetchVideoCategoryTitles(ctx context.Context, regionCode string) (map[string]string, error) {
+	svc, err := yt.NewService(ctx, option.WithAPIKey(c.apiKey))
+	if err != nil {
+		return nil, fmt.Errorf("create youtube service: %w", err)
+	}
+	resp, err := svc.VideoCategories.List([]string{"snippet"}).RegionCode(regionCode).Do()
+	if err != nil {
+		return nil, fmt.Errorf("fetch video categories: %w", err)
+	}
+	out := make(map[string]string, len(resp.Items))
+	for _, item := range resp.Items {
+		if item.Id != "" && item.Snippet != nil {
+			out[item.Id] = item.Snippet.Title
+		}
+	}
+	return out, nil
 }
 
 func (c *Client) FetchTopComments(ctx context.Context, videoID string, maxResults int64) ([]Comment, error) {
@@ -435,12 +461,17 @@ func (c *Client) FetchVideo(ctx context.Context, videoID string) (*TrendingVideo
 		thumb = item.Snippet.Thumbnails.Medium.Url
 	}
 
+	categoryID := ""
+	if item.Snippet != nil {
+		categoryID = item.Snippet.CategoryId
+	}
 	return &TrendingVideo{
 		VideoID:      item.Id,
 		Title:        item.Snippet.Title,
 		ChannelTitle: item.Snippet.ChannelTitle,
 		ThumbnailURL: thumb,
 		ViewCount:    item.Statistics.ViewCount,
+		CategoryID:   categoryID,
 	}, nil
 }
 

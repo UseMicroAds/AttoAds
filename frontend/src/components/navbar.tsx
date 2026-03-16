@@ -36,20 +36,36 @@ export function Navbar() {
             Test Comments
           </Link>
           {user?.role === "advertiser" && (
-            <Link
-              href="/campaigns"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Campaigns
-            </Link>
+            <>
+              <Link
+                href="/campaigns"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Campaigns
+              </Link>
+              <Link
+                href="/bounties"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Bounties
+              </Link>
+            </>
           )}
           {user?.role === "commenter" && (
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                href="/dashboard"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/bounty-hunt"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Bounty Hunt
+              </Link>
+            </>
           )}
         </nav>
 
@@ -72,14 +88,24 @@ export function Navbar() {
                 </div>
                 <DropdownMenuSeparator />
                 {user.role === "commenter" && (
-                  <DropdownMenuItem>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Link href="/bounty-hunt">Bounty Hunt</Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 {user.role === "advertiser" && (
-                  <DropdownMenuItem>
-                    <Link href="/campaigns">Campaigns</Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem>
+                      <Link href="/campaigns">Campaigns</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Link href="/bounties">Bounties</Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuItem>
                   <Link href="/test/my-comments">Test Comments</Link>

@@ -40,6 +40,9 @@ export const api = {
       body: JSON.stringify({ address }),
     }),
 
+  unlinkWallet: () =>
+    request<{ ok: string }>("/api/wallet/link", { method: "DELETE" }),
+
   // Marketplace
   listComments: (limit = 20, offset = 0) =>
     request<ViralComment[]>(`/api/marketplace/comments?limit=${limit}&offset=${offset}`),
@@ -97,6 +100,38 @@ export const api = {
       body: JSON.stringify({ campaign_id: campaignId, comment_id: commentId }),
     }),
 
+  // Bounties (advertiser)
+  createBounty: (data: CreateBountyInput) =>
+    request<Bounty>("/api/bounties", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  listBounties: () => request<Bounty[]>("/api/bounties"),
+
+  getBounty: (id: string) => request<Bounty>(`/api/bounties/${id}`),
+
+  fundBounty: (id: string, txHash: string) =>
+    request<{ status: string }>(`/api/bounties/${id}/fund`, {
+      method: "POST",
+      body: JSON.stringify({ tx_hash: txHash }),
+    }),
+
+  listBountyDeals: (id: string) =>
+    request<Deal[]>(`/api/bounties/${id}/deals`),
+
+  // Bounties (commenter - hunt)
+  listActiveBounties: () => request<Bounty[]>("/api/bounties/active"),
+
+  listEligibleCommentsForBounty: (bountyId: string) =>
+    request<ViralComment[]>(`/api/bounties/${bountyId}/eligible-comments`),
+
+  claimBounty: (bountyId: string, commentId: string) =>
+    request<Deal>(`/api/bounties/${bountyId}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ comment_id: commentId }),
+    }),
+
   // Commenter
   listMyComments: () => request<ViralComment[]>("/api/my/comments"),
   listMyDeals: () => request<Deal[]>("/api/my/deals"),
@@ -134,12 +169,15 @@ export interface TrendingVideo {
   channel_title: string;
   thumbnail_url: string;
   view_count: number;
+  video_category?: string;
   discovered_at: string;
 }
 
 export interface ViralComment {
   id: string;
   video_id: string;
+  video_title?: string;
+  video_category?: string;
   comment_id: string;
   author_channel_id: string;
   author_display_name: string;
@@ -161,9 +199,31 @@ export interface Campaign {
   created_at: string;
 }
 
+export interface Bounty {
+  id: string;
+  advertiser_id: string;
+  ad_text: string;
+  budget_cents: number;
+  amount_per_claim_cents: number;
+  video_category?: string;
+  min_likes: number;
+  status: "draft" | "funded" | "active" | "completed";
+  escrow_tx_hash?: string;
+  created_at: string;
+}
+
+export interface CreateBountyInput {
+  ad_text: string;
+  budget_cents: number;
+  amount_per_claim_cents: number;
+  video_category?: string;
+  min_likes?: number;
+}
+
 export interface Deal {
   id: string;
-  campaign_id: string;
+  campaign_id?: string;
+  bounty_id?: string;
   comment_id: string;
   commenter_id: string;
   status: "pending" | "edit_pending" | "verified" | "paid" | "failed";

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -148,6 +149,20 @@ func (h *AuthHandlers) LinkWallet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, wallet)
+}
+
+func (h *AuthHandlers) UnlinkWallet(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if err := h.Store.DeleteWalletByUser(r.Context(), claims.UserID); err != nil {
+		slog.Error("wallet unlink failed", "user_id", claims.UserID, "error", err)
+		writeError(w, http.StatusInternalServerError, "failed to unlink wallet")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"ok": "wallet unlinked"})
 }
 
 func (h *AuthHandlers) GetMe(w http.ResponseWriter, r *http.Request) {

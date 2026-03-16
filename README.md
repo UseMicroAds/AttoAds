@@ -2,6 +2,16 @@
 
 A micro-sponsorship marketplace connecting brands with YouTube's top commenters. Advertisers pay for plain-text shoutouts on viral comments. Commenters get paid instantly in USDC on Base.
 
+## Campaigns vs Bounties
+
+- **Campaigns**: Advertiser picks specific comments from the marketplace and pays for edits. One deal per comment; verifier appends ad text and releases payment after verification.
+- **Bounties**: Advertiser sets rules (min likes, optional category) and funds a pool. Commenters **hunt** bounties by claiming with their own qualifying comments. First claimants within budget get paid; when the pool is exhausted the bounty is marked **completed** and no longer shown to commenters. The verifier edits the comment and pays out the same way as campaigns (deal status: `pending` → `edit_pending` → `verified` → `paid`).
+
+## Test Page & Bounty Hunt
+
+- **Test page** (`/test/my-comments`): Enter a video ID to load comments. **Advertisers** can create campaign deals or create/fund test bounties. **Commenters** see only their channel’s comments; they can hunt bounties even when a comment isn’t in the marketplace yet (the comment is registered on first claim). Comments that already have a deal (claimed/edited) are hidden so they can’t be claimed again.
+- **Bounty Hunt** (`/bounty-hunt`): Commenters see active bounties and their eligible comments; only bounties with remaining budget are listed. Completed bounties are excluded for commenters and shown as completed for advertisers.
+
 ## Architecture
 
 | Component | Tech | Directory |
@@ -63,7 +73,7 @@ cd backend && go run ./cmd/verifier    # Verification worker
 
 ## Smart Contract
 
-The `MicroAdsEscrow` contract on Base holds USDC for advertising campaigns.
+The `MicroAdsEscrow` contract on Base holds USDC for campaigns and bounties.
 
 ```bash
 cd contracts

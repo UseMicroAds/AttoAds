@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function MarketplacePage() {
   const [comments, setComments] = useState<ViralComment[]>([]);
@@ -67,6 +68,8 @@ export default function MarketplacePage() {
 }
 
 function CommentCard({ comment }: { comment: ViralComment }) {
+  const videoUrl = `https://www.youtube.com/watch?v=${comment.video_id}`;
+
   return (
     <Card className="transition-shadow hover:shadow-md">
       <CardHeader className="pb-3">
@@ -80,13 +83,30 @@ function CommentCard({ comment }: { comment: ViralComment }) {
         </div>
         <CardDescription className="text-xs">
           {comment.like_count.toLocaleString()} likes
+          {comment.video_category && (
+            <> · <span className="text-muted-foreground">{comment.video_category}</span></>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {comment.video_title && (
+          <p className="mb-1 line-clamp-1 text-xs text-muted-foreground" title={comment.video_title}>
+            {comment.video_title}
+          </p>
+        )}
         <p className="line-clamp-3 text-sm">{comment.original_text}</p>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Spotted {new Date(comment.first_seen).toLocaleDateString()}
-        </p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            Spotted {new Date(comment.first_seen).toLocaleDateString()}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(videoUrl, "_blank", "noopener,noreferrer")}
+          >
+            Original video
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

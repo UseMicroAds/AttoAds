@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type ViralComment, type Deal, type Transaction } from "@/lib/api";
-import { useAccount } from "wagmi";
+import { useAccount, useDisconnect } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +27,19 @@ import {
 export default function CommenterDashboard() {
   const { user, wallet, channel, refresh } = useAuth();
   const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
 
   const [comments, setComments] = useState<ViralComment[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [walletActionLoading, setWalletActionLoading] = useState(false);
+  const [walletActionMessage, setWalletActionMessage] = useState<string | null>(
+    null
+  );
+  const [walletActionError, setWalletActionError] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (user) {
@@ -41,20 +49,51 @@ export default function CommenterDashboard() {
     }
   }, [user]);
 
-  const handleConnectWallet = async () => {
-    if (isConnected && address) {
+  const handleConnectWallet = () => {
+    setWalletActionMessage(null);
+    setWalletActionError(null);
+    openConnectModal?.();
+  };
+
+  const handleUpdateWalletAddress = async () => {
+    setWalletActionMessage(null);
+    setWalletActionError(null);
+
+    if (!isConnected || !address) {
+      setWalletActionError("Connect a wallet first.");
+      return;
+    }
+
+    if (isWalletSynced) {
+      setWalletActionMessage("Connected wallet is already saved.");
+      return;
+    }
+
+    setWalletActionLoading(true);
+    try {
       await api.linkWallet(address);
-      refresh();
-    } else {
-      openConnectModal?.();
+      await refresh();
+      setWalletActionMessage("Wallet address updated.");
+    } catch (err) {
+      setWalletActionError(
+        err instanceof Error ? err.message : "Failed to update wallet address."
+      );
+    } finally {
+      setWalletActionLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (isConnected && address && !wallet) {
-      api.linkWallet(address).then(() => refresh());
-    }
-  }, [isConnected, address, wallet, refresh]);
+  const handleDisconnectWallet = () => {
+    setWalletActionMessage(null);
+    setWalletActionError(null);
+    disconnect();
+    setWalletActionMessage("Wallet disconnected. Connect another account.");
+  };
+
+  const isWalletSynced =
+    !!wallet &&
+    !!address &&
+    wallet.address.toLowerCase() === address.toLowerCase();
 
   const totalEarnings = transactions
     .filter((t) => t.status === "confirmed")
@@ -95,11 +134,44 @@ export default function CommenterDashboard() {
                   {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
                 </span>
               ) : (
-                <Button size="sm" onClick={handleConnectWallet}>
-                  {isConnected ? "Link Wallet" : "Connect Wallet"}
-                </Button>
+                <span className="text-sm text-muted-foreground">Not linked</span>
               )}
             </CardTitle>
+            <CardDescription className="font-mono text-xs">
+              {isConnected && address
+                ? `Connected: ${address.slice(0, 6)}...${address.slice(-4)}`
+                : "No wallet connected"}
+            </CardDescription>
+            <div className="pt-2">
+              {!isConnected ? (
+                <Button size="sm" onClick={handleConnectWallet}>
+                  Connect Wallet
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleDisconnectWallet}>
+                    Disconnect Wallet
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleUpdateWalletAddress}
+                    disabled={walletActionLoading}
+                  >
+                    {walletActionLoading
+                      ? "Updating..."
+                      : "Update Wallet Address"}
+                  </Button>
+                </div>
+              )}
+            </div>
+            {walletActionMessage && (
+              <p className="pt-2 text-xs text-muted-foreground">
+                {walletActionMessage}
+              </p>
+            )}
+            {walletActionError && (
+              <p className="pt-2 text-xs text-destructive">{walletActionError}</p>
+            )}
           </CardHeader>
         </Card>
         <Card>
