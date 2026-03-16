@@ -95,7 +95,7 @@ dev:
 	( cd backend && go run ./cmd/api ) & \
 	( cd backend && go run ./cmd/discovery ) & \
 	( cd backend && go run ./cmd/verifier ) & \
-	( cd backend && go run ./cmd/performance ) & \
+	if [ -n "$$YOUTUBE_API_KEY" ]; then ( cd backend && go run ./cmd/performance ) & fi; \
 	( cd frontend && npm run dev ) & \
 	wait
 
