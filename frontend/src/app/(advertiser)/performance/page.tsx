@@ -194,12 +194,12 @@ export default function PerformancePage() {
                           </LineChart>
                         </ResponsiveContainer>
                         <p className="mt-2 text-center text-xs text-muted-foreground">
-                          Likes per minute since the comment was edited (from discovery polls).
+                          Likes per minute since the comment was edited, based on an initial verifier capture and periodic performance worker updates.
                         </p>
                       </div>
                     ) : (
                       <p className="py-6 text-center text-sm text-muted-foreground">
-                        No metrics yet. Data is recorded when discovery runs or after the comment is edited.
+                        No metrics yet. Data is recorded shortly after the comment is verified or edited, and then periodically by the performance worker.
                       </p>
                     )}
                   </div>
