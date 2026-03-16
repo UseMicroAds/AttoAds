@@ -97,17 +97,10 @@ func (h *PerformanceHandlers) GetDealPerformance(w http.ResponseWriter, r *http.
 		return
 	}
 
-	rows, err := h.Store.ListDealsForAdvertiser(r.Context(), claims.UserID)
+	found, err := h.Store.GetDealForAdvertiser(r.Context(), claims.UserID, dealID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list deals")
+		writeError(w, http.StatusInternalServerError, "failed to get deal")
 		return
-	}
-	var found *db.DealWithCommentInfo
-	for i := range rows {
-		if rows[i].Deal.ID == dealID {
-			found = &rows[i]
-			break
-		}
 	}
 	if found == nil {
 		writeError(w, http.StatusNotFound, "deal not found")

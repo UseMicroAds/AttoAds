@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -551,7 +552,15 @@ func (s *Store) GetDealByID(ctx context.Context, id uuid.UUID) (*models.Deal, er
 
 // ListDealsForAdvertiser returns all deals for campaigns or bounties owned by the advertiser, with comment info for the performance view.
 func (s *Store) ListDealsForAdvertiser(ctx context.Context, advertiserID uuid.UUID) ([]DealWithCommentInfo, error) {
-	rows, err := s.Pool.Query(ctx, `
+	rows, err := s.Pool.Query(ctx, listDealsForAdvertiserSQL+` ORDER BY d.created_at DESC`, advertiserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, scanDealWithCommentInfo)
+}
+
+const listDealsForAdvertiserSQL = `
 		SELECT d.id, d.campaign_id, d.bounty_id, d.comment_id, d.commenter_id, d.status, d.edited_at, d.created_at, d.updated_at,
 		       tv.video_id AS youtube_video_id, vc.comment_id AS youtube_comment_id, vc.original_text, vc.like_count, vc.velocity
 		FROM deals d
@@ -559,13 +568,26 @@ func (s *Store) ListDealsForAdvertiser(ctx context.Context, advertiserID uuid.UU
 		JOIN trending_videos tv ON tv.id = vc.video_id
 		LEFT JOIN campaigns c ON c.id = d.campaign_id
 		LEFT JOIN bounties b ON b.id = d.bounty_id
-		WHERE (c.advertiser_id = $1 OR b.advertiser_id = $1)
-		ORDER BY d.created_at DESC`, advertiserID)
+		WHERE (c.advertiser_id = $1 OR b.advertiser_id = $1)`
+
+// GetDealForAdvertiser returns a single deal by ID if it belongs to a campaign or bounty owned by the advertiser.
+func (s *Store) GetDealForAdvertiser(ctx context.Context, advertiserID, dealID uuid.UUID) (*DealWithCommentInfo, error) {
+	row := s.Pool.QueryRow(ctx, listDealsForAdvertiserSQL+` AND d.id = $2`, advertiserID, dealID)
+	var out DealWithCommentInfo
+	var cID, bID *uuid.UUID
+	var editedAt *time.Time
+	err := row.Scan(&out.Deal.ID, &cID, &bID, &out.Deal.CommentID, &out.Deal.CommenterID, &out.Deal.Status, &editedAt, &out.Deal.CreatedAt, &out.Deal.UpdatedAt,
+		&out.YouTubeVideoID, &out.YouTubeCommentID, &out.OriginalText, &out.LikeCount, &out.Velocity)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	defer rows.Close()
-	return pgx.CollectRows(rows, scanDealWithCommentInfo)
+	out.Deal.CampaignID = cID
+	out.Deal.BountyID = bID
+	out.Deal.EditedAt = editedAt
+	return &out, nil
 }
 
 // DealWithCommentInfo is used for the advertiser performance list.
