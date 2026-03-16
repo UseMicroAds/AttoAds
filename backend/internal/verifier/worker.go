@@ -256,6 +256,13 @@ func (w *Worker) reconcileTransactions(ctx context.Context) {
 			_ = w.store.UpdateTransactionStatus(ctx, tx.ID, models.TxConfirmed)
 			_ = w.store.UpdateDealStatus(ctx, tx.DealID, models.DealPaid)
 			slog.Info("verifier: payout confirmed", "tx_id", tx.ID, "tx_hash", tx.TxHash, "deal_id", tx.DealID)
+			// If this was a bounty deal, mark bounty completed when budget is exhausted
+			deal, err := w.store.GetDealByID(ctx, tx.DealID)
+			if err == nil && deal.BountyID != nil {
+				if err := w.store.CompleteBountyIfBudgetExhausted(ctx, *deal.BountyID); err != nil {
+					slog.Error("verifier: failed to complete bounty if exhausted", "bounty_id", deal.BountyID, "error", err)
+				}
+			}
 			continue
 		}
 

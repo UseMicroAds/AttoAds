@@ -360,7 +360,7 @@ func (s *Store) ListBountiesByAdvertiser(ctx context.Context, advertiserID uuid.
 func (s *Store) ListActiveBounties(ctx context.Context) ([]models.Bounty, error) {
 	rows, err := s.Pool.Query(ctx,
 		`SELECT id, advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes, status, escrow_tx_hash, created_at, updated_at
-		 FROM bounties WHERE status IN ('funded', 'active') ORDER BY created_at ASC`)
+		 FROM bounties WHERE status IN ('funded', 'active') AND status != 'completed' ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -377,6 +377,30 @@ func (s *Store) UpdateBountyStatus(ctx context.Context, id uuid.UUID, status mod
 		`UPDATE bounties SET status = $1, escrow_tx_hash = COALESCE($2, escrow_tx_hash), updated_at = now() WHERE id = $3`,
 		status, escrowTxHash, id)
 	return err
+}
+
+// CompleteBountyIfBudgetExhausted marks the bounty as completed when total paid payouts reach or exceed the budget.
+func (s *Store) CompleteBountyIfBudgetExhausted(ctx context.Context, bountyID uuid.UUID) error {
+	bounty, err := s.GetBountyByID(ctx, bountyID)
+	if err != nil {
+		return err
+	}
+	if bounty.Status == models.CampaignCompleted {
+		return nil
+	}
+	var paidCount int
+	err = s.Pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM deals WHERE bounty_id = $1 AND status = $2`,
+		bountyID, models.DealPaid,
+	).Scan(&paidCount)
+	if err != nil {
+		return err
+	}
+	spent := paidCount * bounty.AmountPerClaimCents
+	if spent >= bounty.BudgetCents {
+		return s.UpdateBountyStatus(ctx, bountyID, models.CampaignCompleted, nil)
+	}
+	return nil
 }
 
 func (s *Store) ListEligibleCommentsForBounty(ctx context.Context, bountyID uuid.UUID, authorChannelID *string) ([]models.ViralComment, error) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -279,6 +280,12 @@ type RegisterCommentForTestingRequest struct {
 }
 
 func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	var req RegisterCommentForTestingRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -293,6 +300,22 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 	if req.Text == "" {
 		writeError(w, http.StatusBadRequest, "text is required")
 		return
+	}
+
+	// Commenters may only register comments from their own linked YouTube channel
+	if claims.Role == models.RoleCommenter {
+		ch, err := h.Store.GetYouTubeChannelByUser(r.Context(), claims.UserID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "link your YouTube channel first")
+			return
+		}
+		// Normalize for comparison: YouTube may return channel IDs with different casing/whitespace
+		linkedID := strings.TrimSpace(ch.ChannelID)
+		commentAuthorID := strings.TrimSpace(req.AuthorChannelID)
+		if !strings.EqualFold(linkedID, commentAuthorID) {
+			writeError(w, http.StatusForbidden, "you can only register comments from your own channel")
+			return
+		}
 	}
 
 	_, err := h.Store.GetYouTubeChannelByChannelID(r.Context(), req.AuthorChannelID)

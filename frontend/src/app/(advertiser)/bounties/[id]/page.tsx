@@ -32,6 +32,13 @@ import {
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 
+const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "outline",
+  funded: "secondary",
+  active: "default",
+  completed: "secondary",
+};
+
 export default function BountyDetailPage({
   params,
 }: {
@@ -176,9 +183,12 @@ export default function BountyDetailPage({
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>&ldquo;{bounty.ad_text}&rdquo;</CardTitle>
-            <Badge>{bounty.status}</Badge>
+            <Badge variant={statusColors[bounty.status] ?? "secondary"}>
+              {bounty.status}
+            </Badge>
           </div>
           <CardDescription>
+            {bounty.status === "completed" && "Bounty closed — no new claims. "}
             Bounty {bounty.id.slice(0, 8)}...
             {bounty.min_likes > 0 && ` · Min ${bounty.min_likes} likes`}
             {bounty.video_category && ` · Category: ${bounty.video_category}`}

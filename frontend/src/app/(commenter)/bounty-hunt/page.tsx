@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { api, type Bounty, type ViralComment } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,35 @@ export default function BountyHuntPage() {
   const [claimingFor, setClaimingFor] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const fetchActiveBounties = useCallback(() => {
+    if (!user) return;
+    api
+      .listActiveBounties()
+      .then((list) => {
+        const activeOnly = list.filter((b) => b.status !== "completed");
+        setBounties(activeOnly);
+        setSelectedBountyId((prev) =>
+          prev && activeOnly.some((b) => b.id === prev) ? prev : null
+        );
+      })
+      .catch(() => {})
+      .finally(() => setLoadingBounties(false));
+  }, [user]);
+
   useEffect(() => {
     if (user) {
-      api
-        .listActiveBounties()
-        .then(setBounties)
-        .catch(() => {})
-        .finally(() => setLoadingBounties(false));
+      setLoadingBounties(true);
+      fetchActiveBounties();
     }
-  }, [user]);
+  }, [user, fetchActiveBounties]);
+
+  // Refetch when tab gets focus so completed bounties disappear
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => fetchActiveBounties();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [user, fetchActiveBounties]);
 
   useEffect(() => {
     if (!selectedBountyId) {

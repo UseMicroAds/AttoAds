@@ -58,6 +58,7 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 			r.Post("/wallet/link", authH.LinkWallet)
 			r.Delete("/wallet/link", authH.UnlinkWallet)
 			r.Get("/bounties/{id}", bountyH.Get)
+			r.Post("/marketplace/comments/register-test", marketplaceH.RegisterCommentForTesting)
 
 			// Advertiser routes
 			r.Group(func(r chi.Router) {
@@ -73,7 +74,6 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 				r.Post("/bounties/{id}/fund", bountyH.Fund)
 				r.Get("/bounties/{id}/deals", bountyH.ListDeals)
 				r.Post("/deals", marketplaceH.CreateDeal)
-				r.Post("/marketplace/comments/register-test", marketplaceH.RegisterCommentForTesting)
 			})
 
 			// Commenter routes
