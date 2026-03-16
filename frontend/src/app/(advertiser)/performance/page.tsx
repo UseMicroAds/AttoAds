@@ -52,12 +52,31 @@ export default function PerformancePage() {
       setPerformance(null);
       return;
     }
+    let isStale = false;
+    const currentDealId = selectedDealId;
+
     setLoadingPerformance(true);
     api
-      .getDealPerformance(selectedDealId)
-      .then(setPerformance)
-      .catch(() => setPerformance(null))
-      .finally(() => setLoadingPerformance(false));
+      .getDealPerformance(currentDealId)
+      .then((data) => {
+        if (!isStale && currentDealId === selectedDealId) {
+          setPerformance(data);
+        }
+      })
+      .catch(() => {
+        if (!isStale && currentDealId === selectedDealId) {
+          setPerformance(null);
+        }
+      })
+      .finally(() => {
+        if (!isStale && currentDealId === selectedDealId) {
+          setLoadingPerformance(false);
+        }
+      });
+
+    return () => {
+      isStale = true;
+    };
   }, [selectedDealId]);
 
   if (user?.role !== "advertiser") {
