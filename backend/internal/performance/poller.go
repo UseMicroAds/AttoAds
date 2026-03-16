@@ -14,6 +14,10 @@ type Poller struct {
 	store        *db.Store
 	ytClient     *ytclient.Client
 	pollInterval time.Duration
+
+	// per-comment state used for velocity calculation within the performance pipeline
+	lastLikeCount map[int64]int
+	lastPolled    map[int64]time.Time
 }
 
 func NewPoller(store *db.Store, ytClient *ytclient.Client, pollInterval time.Duration) *Poller {
@@ -21,6 +25,8 @@ func NewPoller(store *db.Store, ytClient *ytclient.Client, pollInterval time.Dur
 		store:        store,
 		ytClient:     ytClient,
 		pollInterval: pollInterval,
+		lastLikeCount: make(map[int64]int),
+		lastPolled:    make(map[int64]time.Time),
 	}
 }
 
@@ -66,15 +72,28 @@ func (p *Poller) poll(ctx context.Context) {
 			continue
 		}
 
-		minutesSince := time.Since(vc.LastPolled).Minutes()
-		if minutesSince < 1 {
-			minutesSince = 1
-		}
-		velocity := float64(int(newLikeCount)-vc.LikeCount) / minutesSince
-		if velocity < 0 {
+		// Compute velocity based on per-comment state tracked within this poller,
+		// instead of relying on vc.LastPolled/vc.LikeCount which may be updated
+		// by other workers (e.g. discovery).
+		prevLikeCount, hasPrevLike := p.lastLikeCount[vc.ID]
+		prevPolledAt, hasPrevPolled := p.lastPolled[vc.ID]
+
+		var velocity float64
+		if hasPrevLike && hasPrevPolled {
+			minutesSince := time.Since(prevPolledAt).Minutes()
+			if minutesSince < 1 {
+				minutesSince = 1
+			}
+			velocity = float64(int(newLikeCount)-prevLikeCount) / minutesSince
+			if velocity < 0 {
+				velocity = 0
+			}
+			velocity = math.Round(velocity*100) / 100
+		} else {
+			// No previous state for this comment in the performance pipeline;
+			// establish a baseline with zero velocity.
 			velocity = 0
 		}
-		velocity = math.Round(velocity*100) / 100
 
 		if err := p.store.UpdateViralCommentLikesAndVelocity(ctx, vc.ID, int(newLikeCount), velocity); err != nil {
 			slog.Error("performance: failed to update viral comment", "deal_id", deal.ID, "error", err)
@@ -83,6 +102,10 @@ func (p *Poller) poll(ctx context.Context) {
 		if err := p.store.InsertDealCommentMetric(ctx, deal.ID, int(newLikeCount), velocity); err != nil {
 			slog.Error("performance: failed to insert metric", "deal_id", deal.ID, "error", err)
 		}
+
+		// Update per-comment state for the next poll cycle.
+		p.lastLikeCount[vc.ID] = int(newLikeCount)
+		p.lastPolled[vc.ID] = time.Now()
 	}
 
 	slog.Info("performance: poll complete", "deals", len(deals))
