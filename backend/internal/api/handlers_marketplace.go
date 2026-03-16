@@ -23,6 +23,8 @@ type MarketplaceHandlers struct {
 type MarketplaceCommentResponse struct {
 	ID                uuid.UUID            `json:"id"`
 	VideoID           string               `json:"video_id"`
+	VideoTitle        string               `json:"video_title,omitempty"`
+	VideoCategory     *string              `json:"video_category,omitempty"`
 	CommentID         string               `json:"comment_id"`
 	AuthorChannelID   string               `json:"author_channel_id"`
 	AuthorDisplayName string               `json:"author_display_name"`
@@ -45,7 +47,7 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 
 	rows, err := h.Store.Pool.Query(
 		r.Context(),
-		`SELECT vc.id, tv.video_id, vc.comment_id, vc.author_channel_id, vc.author_display_name,
+		`SELECT vc.id, tv.video_id, tv.title, tv.video_category, vc.comment_id, vc.author_channel_id, vc.author_display_name,
 		        vc.original_text, vc.like_count, vc.velocity, vc.status, vc.first_seen
 		 FROM viral_comments vc
 		 JOIN trending_videos tv ON tv.id = vc.video_id
@@ -67,6 +69,8 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 		if err := rows.Scan(
 			&c.ID,
 			&c.VideoID,
+			&c.VideoTitle,
+			&c.VideoCategory,
 			&c.CommentID,
 			&c.AuthorChannelID,
 			&c.AuthorDisplayName,
@@ -317,6 +321,7 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 		videoID = "testing-channel-" + req.AuthorChannelID
 	}
 
+	var videoCategory *string
 	if h.YTClient != nil && req.VideoID != "" {
 		video, err := h.YTClient.FetchVideo(r.Context(), req.VideoID)
 		if err == nil {
@@ -325,9 +330,16 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 			videoChannelTitle = video.ChannelTitle
 			thumbnailURL = video.ThumbnailURL
 			viewCount = int64(video.ViewCount)
+			if video.CategoryID != "" {
+				titles, err := h.YTClient.FetchVideoCategoryTitles(r.Context(), "US")
+				if err == nil {
+					if t := titles[video.CategoryID]; t != "" {
+						videoCategory = &t
+					}
+				}
+			}
 		}
 	}
-
 	tv, err := h.Store.UpsertTrendingVideo(
 		r.Context(),
 		videoID,
@@ -335,6 +347,7 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 		videoChannelTitle,
 		thumbnailURL,
 		viewCount,
+		videoCategory,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to upsert test video")

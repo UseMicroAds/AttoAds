@@ -72,8 +72,27 @@ func (e *Engine) poll(ctx context.Context) {
 		return
 	}
 
+	categoryTitles, err := e.ytClient.FetchVideoCategoryTitles(ctx, e.regionCode)
+	if err != nil {
+		slog.Warn("discovery: failed to fetch category titles, videos will have no category", "error", err)
+		categoryTitles = nil
+	}
+
 	for _, v := range videos {
-		tv, err := e.store.UpsertTrendingVideo(ctx, v.VideoID, v.Title, v.ChannelTitle, v.ThumbnailURL, int64(v.ViewCount))
+		var videoCategory *string
+		if v.CategoryID != "" {
+			if categoryTitles != nil {
+				if title, ok := categoryTitles[v.CategoryID]; ok && title != "" {
+					videoCategory = &title
+				}
+			}
+			// Fallback: API gave us a category ID but it wasn't in the region's list (or fetch failed)
+			if videoCategory == nil {
+				fallback := "Category " + v.CategoryID
+				videoCategory = &fallback
+			}
+		}
+		tv, err := e.store.UpsertTrendingVideo(ctx, v.VideoID, v.Title, v.ChannelTitle, v.ThumbnailURL, int64(v.ViewCount), videoCategory)
 		if err != nil {
 			slog.Error("discovery: failed to upsert video", "video_id", v.VideoID, "error", err)
 			continue

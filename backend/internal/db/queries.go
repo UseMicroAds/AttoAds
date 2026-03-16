@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -119,22 +120,28 @@ func (s *Store) GetWalletByUser(ctx context.Context, userID uuid.UUID) (*models.
 	return w, nil
 }
 
+func (s *Store) DeleteWalletByUser(ctx context.Context, userID uuid.UUID) error {
+	_, err := s.Pool.Exec(ctx, `DELETE FROM wallets WHERE user_id = $1`, userID)
+	return err
+}
+
 // --- Trending Videos ---
 
-func (s *Store) UpsertTrendingVideo(ctx context.Context, videoID, title, channelTitle, thumbnailURL string, viewCount int64) (*models.TrendingVideo, error) {
+func (s *Store) UpsertTrendingVideo(ctx context.Context, videoID, title, channelTitle, thumbnailURL string, viewCount int64, videoCategory *string) (*models.TrendingVideo, error) {
 	v := &models.TrendingVideo{}
 	err := s.Pool.QueryRow(ctx,
-		`INSERT INTO trending_videos (video_id, title, channel_title, thumbnail_url, view_count)
-		 VALUES ($1, $2, $3, $4, $5)
+		`INSERT INTO trending_videos (video_id, title, channel_title, thumbnail_url, view_count, video_category)
+		 VALUES ($1, $2, $3, $4, $5, $6)
 		 ON CONFLICT (video_id) DO UPDATE SET
 		   title = EXCLUDED.title,
 		   channel_title = EXCLUDED.channel_title,
 		   thumbnail_url = EXCLUDED.thumbnail_url,
 		   view_count = EXCLUDED.view_count,
+		   video_category = COALESCE(EXCLUDED.video_category, trending_videos.video_category),
 		   updated_at = now()
-		 RETURNING id, video_id, title, channel_title, thumbnail_url, view_count, discovered_at, updated_at`,
-		videoID, title, channelTitle, thumbnailURL, viewCount,
-	).Scan(&v.ID, &v.VideoID, &v.Title, &v.ChannelTitle, &v.ThumbnailURL, &v.ViewCount, &v.DiscoveredAt, &v.UpdatedAt)
+		 RETURNING id, video_id, title, channel_title, thumbnail_url, view_count, video_category, discovered_at, updated_at`,
+		videoID, title, channelTitle, thumbnailURL, viewCount, videoCategory,
+	).Scan(&v.ID, &v.VideoID, &v.Title, &v.ChannelTitle, &v.ThumbnailURL, &v.ViewCount, &v.VideoCategory, &v.DiscoveredAt, &v.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +150,7 @@ func (s *Store) UpsertTrendingVideo(ctx context.Context, videoID, title, channel
 
 func (s *Store) ListTrendingVideos(ctx context.Context, limit int) ([]models.TrendingVideo, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, video_id, title, channel_title, thumbnail_url, view_count, discovered_at, updated_at
+		`SELECT id, video_id, title, channel_title, thumbnail_url, view_count, video_category, discovered_at, updated_at
 		 FROM trending_videos ORDER BY updated_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
@@ -151,7 +158,7 @@ func (s *Store) ListTrendingVideos(ctx context.Context, limit int) ([]models.Tre
 	defer rows.Close()
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.TrendingVideo, error) {
 		var v models.TrendingVideo
-		err := row.Scan(&v.ID, &v.VideoID, &v.Title, &v.ChannelTitle, &v.ThumbnailURL, &v.ViewCount, &v.DiscoveredAt, &v.UpdatedAt)
+		err := row.Scan(&v.ID, &v.VideoID, &v.Title, &v.ChannelTitle, &v.ThumbnailURL, &v.ViewCount, &v.VideoCategory, &v.DiscoveredAt, &v.UpdatedAt)
 		return v, err
 	})
 }
@@ -307,15 +314,142 @@ func (s *Store) ListActiveCampaigns(ctx context.Context) ([]models.Campaign, err
 	})
 }
 
+// --- Bounties ---
+
+func (s *Store) CreateBounty(ctx context.Context, advertiserID uuid.UUID, adText string, budgetCents, amountPerClaimCents int, videoCategory *string, minLikes int) (*models.Bounty, error) {
+	b := &models.Bounty{}
+	err := s.Pool.QueryRow(ctx,
+		`INSERT INTO bounties (advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 RETURNING id, advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes, status, escrow_tx_hash, created_at, updated_at`,
+		advertiserID, adText, budgetCents, amountPerClaimCents, videoCategory, minLikes,
+	).Scan(&b.ID, &b.AdvertiserID, &b.AdText, &b.BudgetCents, &b.AmountPerClaimCents, &b.VideoCategory, &b.MinLikes, &b.Status, &b.EscrowTxHash, &b.CreatedAt, &b.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (s *Store) GetBountyByID(ctx context.Context, id uuid.UUID) (*models.Bounty, error) {
+	b := &models.Bounty{}
+	err := s.Pool.QueryRow(ctx,
+		`SELECT id, advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes, status, escrow_tx_hash, created_at, updated_at
+		 FROM bounties WHERE id = $1`, id,
+	).Scan(&b.ID, &b.AdvertiserID, &b.AdText, &b.BudgetCents, &b.AmountPerClaimCents, &b.VideoCategory, &b.MinLikes, &b.Status, &b.EscrowTxHash, &b.CreatedAt, &b.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (s *Store) ListBountiesByAdvertiser(ctx context.Context, advertiserID uuid.UUID) ([]models.Bounty, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes, status, escrow_tx_hash, created_at, updated_at
+		 FROM bounties WHERE advertiser_id = $1 ORDER BY created_at DESC`, advertiserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Bounty, error) {
+		var b models.Bounty
+		err := row.Scan(&b.ID, &b.AdvertiserID, &b.AdText, &b.BudgetCents, &b.AmountPerClaimCents, &b.VideoCategory, &b.MinLikes, &b.Status, &b.EscrowTxHash, &b.CreatedAt, &b.UpdatedAt)
+		return b, err
+	})
+}
+
+func (s *Store) ListActiveBounties(ctx context.Context) ([]models.Bounty, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, advertiser_id, ad_text, budget_cents, amount_per_claim_cents, video_category, min_likes, status, escrow_tx_hash, created_at, updated_at
+		 FROM bounties WHERE status IN ('funded', 'active') ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Bounty, error) {
+		var b models.Bounty
+		err := row.Scan(&b.ID, &b.AdvertiserID, &b.AdText, &b.BudgetCents, &b.AmountPerClaimCents, &b.VideoCategory, &b.MinLikes, &b.Status, &b.EscrowTxHash, &b.CreatedAt, &b.UpdatedAt)
+		return b, err
+	})
+}
+
+func (s *Store) UpdateBountyStatus(ctx context.Context, id uuid.UUID, status models.CampaignStatus, escrowTxHash *string) error {
+	_, err := s.Pool.Exec(ctx,
+		`UPDATE bounties SET status = $1, escrow_tx_hash = COALESCE($2, escrow_tx_hash), updated_at = now() WHERE id = $3`,
+		status, escrowTxHash, id)
+	return err
+}
+
+func (s *Store) ListEligibleCommentsForBounty(ctx context.Context, bountyID uuid.UUID, authorChannelID *string) ([]models.ViralComment, error) {
+	bounty, err := s.GetBountyByID(ctx, bountyID)
+	if err != nil {
+		return nil, err
+	}
+	// Join viral_comments with trending_videos; filter by min_likes and optional video_category
+	// Exclude comments that already have a claim (deal) for this bounty
+	// When authorChannelID is set, only return comments authored by that channel (for bounty hunt: current user's comments)
+	query := `SELECT vc.id, vc.video_id, vc.comment_id, vc.author_channel_id, vc.author_display_name,
+	          vc.original_text, vc.like_count, vc.prev_like_count, vc.velocity, vc.status, vc.first_seen, vc.last_polled
+	          FROM viral_comments vc
+	          JOIN trending_videos tv ON tv.id = vc.video_id
+	          LEFT JOIN deals d ON d.bounty_id = $2 AND d.comment_id = vc.id
+	          WHERE vc.status = 'available' AND vc.like_count >= $1 AND d.id IS NULL`
+	args := []interface{}{bounty.MinLikes, bountyID}
+	if bounty.VideoCategory != nil && *bounty.VideoCategory != "" {
+		query += ` AND (tv.video_category IS NOT NULL AND LOWER(tv.video_category) LIKE LOWER($3))`
+		args = append(args, "%"+*bounty.VideoCategory+"%")
+	}
+	if authorChannelID != nil && *authorChannelID != "" {
+		query += ` AND vc.author_channel_id = $` + strconv.Itoa(len(args)+1)
+		args = append(args, *authorChannelID)
+	}
+	query += ` ORDER BY vc.like_count DESC`
+	rows, err := s.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.ViralComment, error) {
+		var c models.ViralComment
+		err := row.Scan(&c.ID, &c.VideoID, &c.CommentID, &c.AuthorChannelID, &c.AuthorDisplayName,
+			&c.OriginalText, &c.LikeCount, &c.PrevLikeCount, &c.Velocity, &c.Status, &c.FirstSeen, &c.LastPolled)
+		return c, err
+	})
+}
+
 // --- Deals ---
+
+func scanDeal(row pgx.CollectableRow) (models.Deal, error) {
+	var d models.Deal
+	var cID, bID *uuid.UUID
+	err := row.Scan(&d.ID, &cID, &bID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		return d, err
+	}
+	d.CampaignID = cID
+	d.BountyID = bID
+	return d, nil
+}
 
 func (s *Store) CreateDeal(ctx context.Context, campaignID, commentID, commenterID uuid.UUID) (*models.Deal, error) {
 	d := &models.Deal{}
 	err := s.Pool.QueryRow(ctx,
 		`INSERT INTO deals (campaign_id, comment_id, commenter_id) VALUES ($1, $2, $3)
-		 RETURNING id, campaign_id, comment_id, commenter_id, status, created_at, updated_at`,
+		 RETURNING id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at`,
 		campaignID, commentID, commenterID,
-	).Scan(&d.ID, &d.CampaignID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+	).Scan(&d.ID, &d.CampaignID, &d.BountyID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
+func (s *Store) CreateBountyClaim(ctx context.Context, bountyID, commentID, commenterID uuid.UUID) (*models.Deal, error) {
+	d := &models.Deal{}
+	err := s.Pool.QueryRow(ctx,
+		`INSERT INTO deals (bounty_id, comment_id, commenter_id) VALUES ($1, $2, $3)
+		 RETURNING id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at`,
+		bountyID, commentID, commenterID,
+	).Scan(&d.ID, &d.CampaignID, &d.BountyID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -328,60 +462,62 @@ func (s *Store) UpdateDealStatus(ctx context.Context, id uuid.UUID, status model
 	return err
 }
 
+func (s *Store) ListDealsByBounty(ctx context.Context, bountyID uuid.UUID) ([]models.Deal, error) {
+	rows, err := s.Pool.Query(ctx,
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at
+		 FROM deals WHERE bounty_id = $1 ORDER BY created_at DESC`, bountyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return pgx.CollectRows(rows, scanDeal)
+}
+
 func (s *Store) ListDealsByCampaign(ctx context.Context, campaignID uuid.UUID) ([]models.Deal, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, campaign_id, comment_id, commenter_id, status, created_at, updated_at
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at
 		 FROM deals WHERE campaign_id = $1 ORDER BY created_at DESC`, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Deal, error) {
-		var d models.Deal
-		err := row.Scan(&d.ID, &d.CampaignID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
-		return d, err
-	})
+	return pgx.CollectRows(rows, scanDeal)
 }
 
 func (s *Store) ListDealsByCommenter(ctx context.Context, commenterID uuid.UUID) ([]models.Deal, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, campaign_id, comment_id, commenter_id, status, created_at, updated_at
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at
 		 FROM deals WHERE commenter_id = $1 ORDER BY created_at DESC`, commenterID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Deal, error) {
-		var d models.Deal
-		err := row.Scan(&d.ID, &d.CampaignID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
-		return d, err
-	})
+	return pgx.CollectRows(rows, scanDeal)
 }
 
 func (s *Store) ListPendingDeals(ctx context.Context) ([]models.Deal, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, campaign_id, comment_id, commenter_id, status, created_at, updated_at
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at
 		 FROM deals WHERE status IN ('pending', 'edit_pending', 'verified') ORDER BY created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.Deal, error) {
-		var d models.Deal
-		err := row.Scan(&d.ID, &d.CampaignID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
-		return d, err
-	})
+	return pgx.CollectRows(rows, scanDeal)
 }
 
 func (s *Store) GetDealByID(ctx context.Context, id uuid.UUID) (*models.Deal, error) {
 	d := &models.Deal{}
+	var cID, bID *uuid.UUID
 	err := s.Pool.QueryRow(ctx,
-		`SELECT id, campaign_id, comment_id, commenter_id, status, created_at, updated_at
+		`SELECT id, campaign_id, bounty_id, comment_id, commenter_id, status, created_at, updated_at
 		 FROM deals WHERE id = $1`, id,
-	).Scan(&d.ID, &d.CampaignID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
+	).Scan(&d.ID, &cID, &bID, &d.CommentID, &d.CommenterID, &d.Status, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
+	d.CampaignID = cID
+	d.BountyID = bID
 	return d, nil
 }
 

@@ -71,9 +71,23 @@ func (w *Worker) checkDeals(ctx context.Context) {
 }
 
 func (w *Worker) editComment(ctx context.Context, deal models.Deal) {
-	campaign, err := w.store.GetCampaignByID(ctx, deal.CampaignID)
-	if err != nil {
-		slog.Error("verifier: failed to get campaign", "deal_id", deal.ID, "error", err)
+	var adText string
+	if deal.BountyID != nil {
+		bounty, err := w.store.GetBountyByID(ctx, *deal.BountyID)
+		if err != nil {
+			slog.Error("verifier: failed to get bounty", "deal_id", deal.ID, "error", err)
+			return
+		}
+		adText = bounty.AdText
+	} else if deal.CampaignID != nil {
+		campaign, err := w.store.GetCampaignByID(ctx, *deal.CampaignID)
+		if err != nil {
+			slog.Error("verifier: failed to get campaign", "deal_id", deal.ID, "error", err)
+			return
+		}
+		adText = campaign.AdText
+	} else {
+		slog.Error("verifier: deal has no campaign or bounty", "deal_id", deal.ID)
 		return
 	}
 
@@ -95,7 +109,7 @@ func (w *Worker) editComment(ctx context.Context, deal models.Deal) {
 		Expiry:       ytCh.TokenExpiry,
 	}
 
-	newText := comment.OriginalText + "\n\n" + campaign.AdText
+	newText := comment.OriginalText + "\n\n" + adText
 
 	if err := w.ytClient.UpdateComment(ctx, token, w.oauthCfg, comment.CommentID, newText); err != nil {
 		slog.Error("verifier: failed to edit comment", "deal_id", deal.ID, "error", err)
@@ -108,9 +122,23 @@ func (w *Worker) editComment(ctx context.Context, deal models.Deal) {
 }
 
 func (w *Worker) verifyComment(ctx context.Context, deal models.Deal) {
-	campaign, err := w.store.GetCampaignByID(ctx, deal.CampaignID)
-	if err != nil {
-		slog.Error("verifier: failed to get campaign", "deal_id", deal.ID, "error", err)
+	var adText string
+	if deal.BountyID != nil {
+		bounty, err := w.store.GetBountyByID(ctx, *deal.BountyID)
+		if err != nil {
+			slog.Error("verifier: failed to get bounty", "deal_id", deal.ID, "error", err)
+			return
+		}
+		adText = bounty.AdText
+	} else if deal.CampaignID != nil {
+		campaign, err := w.store.GetCampaignByID(ctx, *deal.CampaignID)
+		if err != nil {
+			slog.Error("verifier: failed to get campaign", "deal_id", deal.ID, "error", err)
+			return
+		}
+		adText = campaign.AdText
+	} else {
+		slog.Error("verifier: deal has no campaign or bounty", "deal_id", deal.ID)
 		return
 	}
 
@@ -126,7 +154,7 @@ func (w *Worker) verifyComment(ctx context.Context, deal models.Deal) {
 		return
 	}
 
-	if !strings.Contains(currentText, campaign.AdText) {
+	if !strings.Contains(currentText, adText) {
 		slog.Warn("verifier: ad text not found in comment", "deal_id", deal.ID)
 		return
 	}
@@ -137,9 +165,26 @@ func (w *Worker) verifyComment(ctx context.Context, deal models.Deal) {
 }
 
 func (w *Worker) tryPayout(ctx context.Context, deal models.Deal) {
-	campaign, err := w.store.GetCampaignByID(ctx, deal.CampaignID)
-	if err != nil {
-		slog.Error("verifier: failed to get campaign for payout", "deal_id", deal.ID, "error", err)
+	var escrowID string
+	var amountCents int
+	if deal.BountyID != nil {
+		bounty, err := w.store.GetBountyByID(ctx, *deal.BountyID)
+		if err != nil {
+			slog.Error("verifier: failed to get bounty for payout", "deal_id", deal.ID, "error", err)
+			return
+		}
+		escrowID = bounty.ID.String()
+		amountCents = bounty.AmountPerClaimCents
+	} else if deal.CampaignID != nil {
+		campaign, err := w.store.GetCampaignByID(ctx, *deal.CampaignID)
+		if err != nil {
+			slog.Error("verifier: failed to get campaign for payout", "deal_id", deal.ID, "error", err)
+			return
+		}
+		escrowID = campaign.ID.String()
+		amountCents = campaign.PricePerPlacement
+	} else {
+		slog.Error("verifier: deal has no campaign or bounty", "deal_id", deal.ID)
 		return
 	}
 
@@ -171,13 +216,13 @@ func (w *Worker) tryPayout(ctx context.Context, deal models.Deal) {
 		return
 	}
 
-	txHash, err := w.settler.Release(ctx, deal.ID.String(), deal.CampaignID.String(), wallet.Address, campaign.PricePerPlacement)
+	txHash, err := w.settler.Release(ctx, deal.ID.String(), escrowID, wallet.Address, amountCents)
 	if err != nil {
 		slog.Error("verifier: failed to release funds", "deal_id", deal.ID, "error", err)
 		return
 	}
 
-	_, err = w.store.UpsertTransaction(ctx, deal.ID, txHash, campaign.PricePerPlacement, models.TxPending)
+	_, err = w.store.UpsertTransaction(ctx, deal.ID, txHash, amountCents, models.TxPending)
 	if err != nil {
 		slog.Error("verifier: failed to record transaction", "deal_id", deal.ID, "error", err)
 		return
