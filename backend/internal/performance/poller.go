@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/microads/microads-backend/internal/db"
 	ytclient "github.com/microads/microads-backend/internal/youtube"
 )
@@ -16,8 +17,8 @@ type Poller struct {
 	pollInterval time.Duration
 
 	// per-comment state used for velocity calculation within the performance pipeline
-	lastLikeCount map[int64]int
-	lastPolled    map[int64]time.Time
+	lastLikeCount map[uuid.UUID]int
+	lastPolled    map[uuid.UUID]time.Time
 }
 
 func NewPoller(store *db.Store, ytClient *ytclient.Client, pollInterval time.Duration) *Poller {
@@ -25,8 +26,8 @@ func NewPoller(store *db.Store, ytClient *ytclient.Client, pollInterval time.Dur
 		store:        store,
 		ytClient:     ytClient,
 		pollInterval: pollInterval,
-		lastLikeCount: make(map[int64]int),
-		lastPolled:    make(map[int64]time.Time),
+		lastLikeCount: make(map[uuid.UUID]int),
+		lastPolled:    make(map[uuid.UUID]time.Time),
 	}
 }
 
