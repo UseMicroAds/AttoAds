@@ -32,6 +32,7 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 	campaignH := &CampaignHandlers{Store: store}
 	bountyH := &BountyHandlers{Store: store}
 	marketplaceH := &MarketplaceHandlers{Store: store, YTClient: yt}
+	perfH := &PerformanceHandlers{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
@@ -74,6 +75,8 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 				r.Post("/bounties/{id}/fund", bountyH.Fund)
 				r.Get("/bounties/{id}/deals", bountyH.ListDeals)
 				r.Post("/deals", marketplaceH.CreateDeal)
+				r.Get("/deals/performance", perfH.ListDeals)
+				r.Get("/deals/{id}/performance", perfH.GetDealPerformance)
 			})
 
 			// Commenter routes

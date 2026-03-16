@@ -136,8 +136,17 @@ type Deal struct {
 	CommentID   uuid.UUID   `json:"comment_id"`
 	CommenterID uuid.UUID   `json:"commenter_id"`
 	Status      DealStatus  `json:"status"`
+	EditedAt    *time.Time  `json:"edited_at,omitempty"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+type DealCommentMetric struct {
+	ID         uuid.UUID `json:"id"`
+	DealID     uuid.UUID `json:"deal_id"`
+	CapturedAt time.Time `json:"captured_at"`
+	LikeCount  int       `json:"like_count"`
+	Velocity   float64   `json:"velocity"`
 }
 
 type Transaction struct {

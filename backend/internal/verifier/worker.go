@@ -119,6 +119,7 @@ func (w *Worker) editComment(ctx context.Context, deal models.Deal) {
 
 	slog.Info("verifier: comment edited", "deal_id", deal.ID, "comment_id", comment.CommentID)
 	_ = w.store.UpdateDealStatus(ctx, deal.ID, models.DealEditPending)
+	_ = w.store.InsertDealCommentMetric(ctx, deal.ID, comment.LikeCount, comment.Velocity)
 }
 
 func (w *Worker) verifyComment(ctx context.Context, deal models.Deal) {

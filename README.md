@@ -12,6 +12,10 @@ A micro-sponsorship marketplace connecting brands with YouTube's top commenters.
 - **Test page** (`/test/my-comments`): Enter a video ID to load comments. **Advertisers** can create campaign deals or create/fund test bounties. **Commenters** see only their channel’s comments; they can hunt bounties even when a comment isn’t in the marketplace yet (the comment is registered on first claim). Comments that already have a deal (claimed/edited) are hidden so they can’t be claimed again.
 - **Bounty Hunt** (`/bounty-hunt`): Commenters see active bounties and their eligible comments; only bounties with remaining budget are listed. Completed bounties are excluded for commenters and shown as completed for advertisers.
 
+## Deal Performance (advertisers)
+
+- **Performance** (`/performance`): Advertisers see all their deals (from campaigns and bounties) in one list. Each row shows the deal status, a **View comment on YouTube** link to the edited comment, current likes and velocity (likes/min), and an optional **velocity over time** graph (likes per minute since the comment was edited). Metrics are recorded when the verifier edits the comment and when the discovery engine polls comments.
+
 ## Architecture
 
 | Component | Tech | Directory |

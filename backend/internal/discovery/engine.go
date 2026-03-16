@@ -111,14 +111,19 @@ func (e *Engine) poll(ctx context.Context) {
 				continue
 			}
 
-			e.calculateVelocity(ctx, vc)
+			velocity := e.calculateVelocity(ctx, vc)
+			// Record metrics for deals so advertisers can see performance over time
+			dealIDs, _ := e.store.ListDealIDsByViralCommentID(ctx, vc.ID)
+			for _, dealID := range dealIDs {
+				_ = e.store.InsertDealCommentMetric(ctx, dealID, vc.LikeCount, velocity)
+			}
 		}
 	}
 
 	slog.Info("discovery: poll complete", "videos", len(videos))
 }
 
-func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment) {
+func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment) float64 {
 	elapsed := time.Since(vc.FirstSeen).Minutes()
 	if elapsed < 1 {
 		elapsed = 1
@@ -144,4 +149,5 @@ func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment)
 	if err := e.store.UpdateCommentVelocity(ctx, vc.ID, velocity, status); err != nil {
 		slog.Error("discovery: failed to update velocity", "comment_id", vc.CommentID, "error", err)
 	}
+	return velocity
 }
