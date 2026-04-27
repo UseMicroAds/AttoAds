@@ -72,8 +72,27 @@ func (e *Engine) poll(ctx context.Context) {
 		return
 	}
 
+	categoryTitles, err := e.ytClient.FetchVideoCategoryTitles(ctx, e.regionCode)
+	if err != nil {
+		slog.Warn("discovery: failed to fetch category titles, videos will have no category", "error", err)
+		categoryTitles = nil
+	}
+
 	for _, v := range videos {
-		tv, err := e.store.UpsertTrendingVideo(ctx, v.VideoID, v.Title, v.ChannelTitle, v.ThumbnailURL, int64(v.ViewCount))
+		var videoCategory *string
+		if v.CategoryID != "" {
+			if categoryTitles != nil {
+				if title, ok := categoryTitles[v.CategoryID]; ok && title != "" {
+					videoCategory = &title
+				}
+			}
+			// Fallback: API gave us a category ID but it wasn't in the region's list (or fetch failed)
+			if videoCategory == nil {
+				fallback := "Category " + v.CategoryID
+				videoCategory = &fallback
+			}
+		}
+		tv, err := e.store.UpsertTrendingVideo(ctx, v.VideoID, v.Title, v.ChannelTitle, v.ThumbnailURL, int64(v.ViewCount), videoCategory)
 		if err != nil {
 			slog.Error("discovery: failed to upsert video", "video_id", v.VideoID, "error", err)
 			continue
@@ -92,14 +111,14 @@ func (e *Engine) poll(ctx context.Context) {
 				continue
 			}
 
-			e.calculateVelocity(ctx, vc)
+			_ = e.calculateVelocity(ctx, vc)
 		}
 	}
 
 	slog.Info("discovery: poll complete", "videos", len(videos))
 }
 
-func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment) {
+func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment) float64 {
 	elapsed := time.Since(vc.FirstSeen).Minutes()
 	if elapsed < 1 {
 		elapsed = 1
@@ -125,4 +144,5 @@ func (e *Engine) calculateVelocity(ctx context.Context, vc *models.ViralComment)
 	if err := e.store.UpdateCommentVelocity(ctx, vc.ID, velocity, status); err != nil {
 		slog.Error("discovery: failed to update velocity", "comment_id", vc.CommentID, "error", err)
 	}
+	return velocity
 }

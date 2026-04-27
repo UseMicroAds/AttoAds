@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,6 +24,8 @@ type MarketplaceHandlers struct {
 type MarketplaceCommentResponse struct {
 	ID                uuid.UUID            `json:"id"`
 	VideoID           string               `json:"video_id"`
+	VideoTitle        string               `json:"video_title,omitempty"`
+	VideoCategory     *string              `json:"video_category,omitempty"`
 	CommentID         string               `json:"comment_id"`
 	AuthorChannelID   string               `json:"author_channel_id"`
 	AuthorDisplayName string               `json:"author_display_name"`
@@ -70,6 +73,8 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 		if err := rows.Scan(
 			&c.ID,
 			&c.VideoID,
+			&c.VideoTitle,
+			&c.VideoCategory,
 			&c.CommentID,
 			&c.AuthorChannelID,
 			&c.AuthorDisplayName,
@@ -284,6 +289,12 @@ type RegisterCommentForTestingRequest struct {
 }
 
 func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r *http.Request) {
+	claims := auth.GetClaims(r.Context())
+	if claims == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	var req RegisterCommentForTestingRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -298,6 +309,22 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 	if req.Text == "" {
 		writeError(w, http.StatusBadRequest, "text is required")
 		return
+	}
+
+	// Commenters may only register comments from their own linked YouTube channel
+	if claims.Role == models.RoleCommenter {
+		ch, err := h.Store.GetYouTubeChannelByUser(r.Context(), claims.UserID)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "link your YouTube channel first")
+			return
+		}
+		// Normalize for comparison: YouTube may return channel IDs with different casing/whitespace
+		linkedID := strings.TrimSpace(ch.ChannelID)
+		commentAuthorID := strings.TrimSpace(req.AuthorChannelID)
+		if !strings.EqualFold(linkedID, commentAuthorID) {
+			writeError(w, http.StatusForbidden, "you can only register comments from your own channel")
+			return
+		}
 	}
 
 	_, err := h.Store.GetYouTubeChannelByChannelID(r.Context(), req.AuthorChannelID)
@@ -326,6 +353,7 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 		videoID = "testing-channel-" + req.AuthorChannelID
 	}
 
+	var videoCategory *string
 	if h.YTClient != nil && req.VideoID != "" {
 		video, err := h.YTClient.FetchVideo(r.Context(), req.VideoID)
 		if err == nil {
@@ -334,9 +362,16 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 			videoChannelTitle = video.ChannelTitle
 			thumbnailURL = video.ThumbnailURL
 			viewCount = int64(video.ViewCount)
+			if video.CategoryID != "" {
+				titles, err := h.YTClient.FetchVideoCategoryTitles(r.Context(), "US")
+				if err == nil {
+					if t := titles[video.CategoryID]; t != "" {
+						videoCategory = &t
+					}
+				}
+			}
 		}
 	}
-
 	tv, err := h.Store.UpsertTrendingVideo(
 		r.Context(),
 		videoID,
@@ -344,6 +379,7 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 		videoChannelTitle,
 		thumbnailURL,
 		viewCount,
+		videoCategory,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to upsert test video")

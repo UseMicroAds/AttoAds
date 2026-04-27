@@ -30,7 +30,9 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 
 	authH := &AuthHandlers{Store: store, OAuthConfig: oauthCfg, JWTSecret: cfg.JWTSecret}
 	campaignH := &CampaignHandlers{Store: store}
+	bountyH := &BountyHandlers{Store: store}
 	marketplaceH := &MarketplaceHandlers{Store: store, YTClient: yt}
+	perfH := &PerformanceHandlers{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, 200, map[string]string{"status": "ok"})
@@ -55,6 +57,9 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 
 			r.Get("/me", authH.GetMe)
 			r.Post("/wallet/link", authH.LinkWallet)
+			r.Delete("/wallet/link", authH.UnlinkWallet)
+			r.Get("/bounties/{id}", bountyH.Get)
+			r.Post("/marketplace/comments/register-test", marketplaceH.RegisterCommentForTesting)
 
 			// Advertiser routes
 			r.Group(func(r chi.Router) {
@@ -65,8 +70,13 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 				r.Get("/campaigns/{id}", campaignH.Get)
 				r.Post("/campaigns/{id}/fund", campaignH.Fund)
 				r.Get("/campaigns/{id}/deals", campaignH.ListDeals)
+				r.Post("/bounties", bountyH.Create)
+				r.Get("/bounties", bountyH.List)
+				r.Post("/bounties/{id}/fund", bountyH.Fund)
+				r.Get("/bounties/{id}/deals", bountyH.ListDeals)
 				r.Post("/deals", marketplaceH.CreateDeal)
-				r.Post("/marketplace/comments/register-test", marketplaceH.RegisterCommentForTesting)
+				r.Get("/deals/performance", perfH.ListDeals)
+				r.Get("/deals/{id}/performance", perfH.GetDealPerformance)
 			})
 
 			// Commenter routes
@@ -76,6 +86,9 @@ func NewRouter(store *db.Store, cfg *Config, oauthCfg *oauth2.Config, yt *ytclie
 				r.Get("/my/comments", marketplaceH.ListMyComments)
 				r.Get("/my/deals", marketplaceH.ListMyDeals)
 				r.Get("/my/transactions", marketplaceH.ListMyTransactions)
+				r.Get("/bounties/active", bountyH.ListActive)
+				r.Get("/bounties/{id}/eligible-comments", bountyH.ListEligibleComments)
+				r.Post("/bounties/{id}/claim", bountyH.Claim)
 			})
 		})
 	})

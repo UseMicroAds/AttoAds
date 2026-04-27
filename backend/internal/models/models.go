@@ -77,14 +77,15 @@ type Wallet struct {
 }
 
 type TrendingVideo struct {
-	ID           uuid.UUID `json:"id"`
-	VideoID      string    `json:"video_id"`
-	Title        string    `json:"title"`
-	ChannelTitle string    `json:"channel_title"`
-	ThumbnailURL string    `json:"thumbnail_url"`
-	ViewCount    int64     `json:"view_count"`
-	DiscoveredAt time.Time `json:"discovered_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID            uuid.UUID `json:"id"`
+	VideoID       string    `json:"video_id"`
+	Title         string    `json:"title"`
+	ChannelTitle  string    `json:"channel_title"`
+	ThumbnailURL  string    `json:"thumbnail_url"`
+	ViewCount     int64     `json:"view_count"`
+	VideoCategory *string   `json:"video_category,omitempty"`
+	DiscoveredAt  time.Time `json:"discovered_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 type ViralComment struct {
@@ -116,14 +117,38 @@ type Campaign struct {
 	UpdatedAt         time.Time      `json:"updated_at"`
 }
 
+type Bounty struct {
+	ID                  uuid.UUID      `json:"id"`
+	AdvertiserID        uuid.UUID      `json:"advertiser_id"`
+	AdText              string         `json:"ad_text"`
+	BudgetCents         int            `json:"budget_cents"`
+	AmountPerClaimCents int            `json:"amount_per_claim_cents"`
+	VideoCategory       *string        `json:"video_category,omitempty"`
+	MinLikes            int            `json:"min_likes"`
+	Status              CampaignStatus `json:"status"`
+	EscrowTxHash        *string        `json:"escrow_tx_hash,omitempty"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
 type Deal struct {
-	ID          uuid.UUID  `json:"id"`
-	CampaignID  uuid.UUID  `json:"campaign_id"`
-	CommentID   uuid.UUID  `json:"comment_id"`
-	CommenterID uuid.UUID  `json:"commenter_id"`
-	Status      DealStatus `json:"status"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          uuid.UUID   `json:"id"`
+	CampaignID  *uuid.UUID  `json:"campaign_id,omitempty"`
+	BountyID    *uuid.UUID  `json:"bounty_id,omitempty"`
+	CommentID   uuid.UUID   `json:"comment_id"`
+	CommenterID uuid.UUID   `json:"commenter_id"`
+	Status      DealStatus  `json:"status"`
+	EditedAt    *time.Time  `json:"edited_at,omitempty"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+type DealCommentMetric struct {
+	ID         uuid.UUID `json:"id"`
+	DealID     uuid.UUID `json:"deal_id"`
+	CapturedAt time.Time `json:"captured_at"`
+	LikeCount  int       `json:"like_count"`
+	Velocity   float64   `json:"velocity"`
 }
 
 type Transaction struct {

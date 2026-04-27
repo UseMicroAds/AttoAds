@@ -83,9 +83,17 @@ function CommentCard({ comment }: { comment: ViralComment }) {
         </div>
         <CardDescription className="text-xs">
           {comment.like_count.toLocaleString()} likes
+          {comment.video_category && (
+            <> · <span className="text-muted-foreground">{comment.video_category}</span></>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {comment.video_title && (
+          <p className="mb-1 line-clamp-1 text-xs text-muted-foreground" title={comment.video_title}>
+            {comment.video_title}
+          </p>
+        )}
         <p className="line-clamp-3 text-sm">{comment.original_text}</p>
         <div className="mt-3 flex items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
