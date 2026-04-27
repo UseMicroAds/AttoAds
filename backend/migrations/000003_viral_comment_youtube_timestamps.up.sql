@@ -1,0 +1,3 @@
+ALTER TABLE viral_comments
+    ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;

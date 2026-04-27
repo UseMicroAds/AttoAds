@@ -86,7 +86,7 @@ func (e *Engine) poll(ctx context.Context) {
 		}
 
 		for _, c := range comments {
-			vc, err := e.store.UpsertViralComment(ctx, tv.ID, c.CommentID, c.AuthorChannelID, c.AuthorDisplayName, c.TextDisplay, int(c.LikeCount))
+			vc, err := e.store.UpsertViralComment(ctx, tv.ID, c.CommentID, c.AuthorChannelID, c.AuthorDisplayName, c.TextDisplay, int(c.LikeCount), c.PublishedAt, c.UpdatedAt)
 			if err != nil {
 				slog.Error("discovery: failed to upsert comment", "comment_id", c.CommentID, "error", err)
 				continue

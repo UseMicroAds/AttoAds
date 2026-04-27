@@ -30,6 +30,8 @@ type MarketplaceCommentResponse struct {
 	LikeCount         int                  `json:"like_count"`
 	Velocity          float64              `json:"velocity"`
 	Status            models.CommentStatus `json:"status"`
+	PublishedAt       *time.Time           `json:"published_at"`
+	UpdatedAt         *time.Time           `json:"updated_at"`
 	FirstSeen         time.Time            `json:"first_seen"`
 }
 
@@ -46,10 +48,11 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 	rows, err := h.Store.Pool.Query(
 		r.Context(),
 		`SELECT vc.id, tv.video_id, vc.comment_id, vc.author_channel_id, vc.author_display_name,
-		        vc.original_text, vc.like_count, vc.velocity, vc.status, vc.first_seen
+		        vc.original_text, vc.like_count, vc.velocity, vc.status, vc.published_at, vc.updated_at, vc.first_seen
 		 FROM viral_comments vc
 		 JOIN trending_videos tv ON tv.id = vc.video_id
 		 WHERE vc.status = 'available'
+		   AND vc.published_at >= now() - interval '5 days'
 		 ORDER BY vc.velocity DESC
 		 LIMIT $1 OFFSET $2`,
 		limit,
@@ -74,6 +77,8 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 			&c.LikeCount,
 			&c.Velocity,
 			&c.Status,
+			&c.PublishedAt,
+			&c.UpdatedAt,
 			&c.FirstSeen,
 		); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to list comments")
@@ -195,6 +200,8 @@ type ChannelAuthoredComment struct {
 	AuthorDisplayName    string                `json:"author_display_name"`
 	Text                 string                `json:"text"`
 	LikeCount            int64                 `json:"like_count"`
+	PublishedAt          *time.Time            `json:"published_at,omitempty"`
+	UpdatedAt            *time.Time            `json:"updated_at,omitempty"`
 	MarketplaceCommentID *uuid.UUID            `json:"marketplace_comment_id,omitempty"`
 	MarketplaceStatus    *models.CommentStatus `json:"marketplace_status,omitempty"`
 }
@@ -251,6 +258,8 @@ func (h *MarketplaceHandlers) mapMarketplaceStatus(r *http.Request, comments []y
 			AuthorDisplayName: c.AuthorDisplayName,
 			Text:              c.TextDisplay,
 			LikeCount:         c.LikeCount,
+			PublishedAt:       c.PublishedAt,
+			UpdatedAt:         c.UpdatedAt,
 		}
 
 		vc, err := h.Store.GetViralCommentByCommentID(r.Context(), c.CommentID)
@@ -349,6 +358,8 @@ func (h *MarketplaceHandlers) RegisterCommentForTesting(w http.ResponseWriter, r
 		req.AuthorDisplayName,
 		req.Text,
 		int(req.LikeCount),
+		nil,
+		nil,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to register comment for testing")
