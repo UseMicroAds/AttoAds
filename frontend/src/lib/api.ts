@@ -191,6 +191,8 @@ export interface ViralComment {
   like_count: number;
   velocity: number;
   status: "available" | "claimed" | "expired";
+  published_at?: string | null;
+  updated_at?: string | null;
   first_seen: string;
 }
 
@@ -267,6 +269,8 @@ export interface ChannelAuthoredComment {
   author_display_name: string;
   text: string;
   like_count: number;
+  published_at?: string | null;
+  updated_at?: string | null;
   marketplace_comment_id?: string;
   marketplace_status?: ViralComment["status"];
 }

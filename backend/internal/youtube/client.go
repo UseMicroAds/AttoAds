@@ -3,6 +3,7 @@ package youtube
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
@@ -33,6 +34,8 @@ type Comment struct {
 	AuthorDisplayName string
 	TextDisplay       string
 	LikeCount         int64
+	PublishedAt       *time.Time
+	UpdatedAt         *time.Time
 }
 
 func (c *Client) FetchTrendingVideos(ctx context.Context, regionCode string, maxResults int64) ([]TrendingVideo, error) {
@@ -122,6 +125,8 @@ func (c *Client) FetchTopComments(ctx context.Context, videoID string, maxResult
 			AuthorDisplayName: snip.AuthorDisplayName,
 			TextDisplay:       snip.TextDisplay,
 			LikeCount:         int64(snip.LikeCount),
+			PublishedAt:       parseYouTubeTime(snip.PublishedAt),
+			UpdatedAt:         parseYouTubeTime(snip.UpdatedAt),
 		})
 	}
 	return comments, nil
@@ -177,6 +182,8 @@ func (c *Client) FetchCommentsByAuthorOnChannel(ctx context.Context, channelID s
 				AuthorDisplayName: snip.AuthorDisplayName,
 				TextDisplay:       snip.TextDisplay,
 				LikeCount:         int64(snip.LikeCount),
+				PublishedAt:       parseYouTubeTime(snip.PublishedAt),
+				UpdatedAt:         parseYouTubeTime(snip.UpdatedAt),
 			})
 		}
 
@@ -350,6 +357,8 @@ func (c *Client) fetchVideoThreadCommentsByRelevance(ctx context.Context, svc *y
 				AuthorDisplayName: snip.AuthorDisplayName,
 				TextDisplay:       snip.TextDisplay,
 				LikeCount:         int64(snip.LikeCount),
+				PublishedAt:       parseYouTubeTime(snip.PublishedAt),
+				UpdatedAt:         parseYouTubeTime(snip.UpdatedAt),
 			})
 		}
 
@@ -408,6 +417,8 @@ func (c *Client) fetchVideoThreadComments(ctx context.Context, svc *yt.Service, 
 				AuthorDisplayName: snip.AuthorDisplayName,
 				TextDisplay:       snip.TextDisplay,
 				LikeCount:         int64(snip.LikeCount),
+				PublishedAt:       parseYouTubeTime(snip.PublishedAt),
+				UpdatedAt:         parseYouTubeTime(snip.UpdatedAt),
 			})
 
 			if item.Replies != nil {
@@ -427,6 +438,8 @@ func (c *Client) fetchVideoThreadComments(ctx context.Context, svc *yt.Service, 
 						AuthorDisplayName: rs.AuthorDisplayName,
 						TextDisplay:       rs.TextDisplay,
 						LikeCount:         int64(rs.LikeCount),
+						PublishedAt:       parseYouTubeTime(rs.PublishedAt),
+						UpdatedAt:         parseYouTubeTime(rs.UpdatedAt),
 					})
 				}
 			}
@@ -439,6 +452,18 @@ func (c *Client) fetchVideoThreadComments(ctx context.Context, svc *yt.Service, 
 	}
 
 	return out, nil
+}
+
+func parseYouTubeTime(value string) *time.Time {
+	if value == "" {
+		return nil
+	}
+
+	t, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return nil
+	}
+	return &t
 }
 
 func (c *Client) FetchVideo(ctx context.Context, videoID string) (*TrendingVideo, error) {

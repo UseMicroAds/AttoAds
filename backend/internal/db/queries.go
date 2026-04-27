@@ -166,19 +166,21 @@ func (s *Store) ListTrendingVideos(ctx context.Context, limit int) ([]models.Tre
 
 // --- Viral Comments ---
 
-func (s *Store) UpsertViralComment(ctx context.Context, videoID uuid.UUID, commentID, authorChannelID, authorDisplayName, originalText string, likeCount int) (*models.ViralComment, error) {
+func (s *Store) UpsertViralComment(ctx context.Context, videoID uuid.UUID, commentID, authorChannelID, authorDisplayName, originalText string, likeCount int, publishedAt, updatedAt *time.Time) (*models.ViralComment, error) {
 	vc := &models.ViralComment{}
 	err := s.Pool.QueryRow(ctx,
-		`INSERT INTO viral_comments (video_id, comment_id, author_channel_id, author_display_name, original_text, like_count)
-		 VALUES ($1, $2, $3, $4, $5, $6)
+		`INSERT INTO viral_comments (video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, published_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		 ON CONFLICT (comment_id) DO UPDATE SET
 		   prev_like_count = viral_comments.like_count,
 		   like_count = EXCLUDED.like_count,
+		   published_at = COALESCE(EXCLUDED.published_at, viral_comments.published_at),
+		   updated_at = COALESCE(EXCLUDED.updated_at, viral_comments.updated_at),
 		   last_polled = now()
-		 RETURNING id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled`,
-		videoID, commentID, authorChannelID, authorDisplayName, originalText, likeCount,
+		 RETURNING id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, published_at, updated_at, first_seen, last_polled`,
+		videoID, commentID, authorChannelID, authorDisplayName, originalText, likeCount, publishedAt, updatedAt,
 	).Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
-		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.PublishedAt, &vc.UpdatedAt, &vc.FirstSeen, &vc.LastPolled)
 	if err != nil {
 		return nil, err
 	}
@@ -194,8 +196,11 @@ func (s *Store) UpdateCommentVelocity(ctx context.Context, id uuid.UUID, velocit
 
 func (s *Store) ListAvailableComments(ctx context.Context, limit, offset int) ([]models.ViralComment, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
-		 FROM viral_comments WHERE status = 'available' ORDER BY velocity DESC LIMIT $1 OFFSET $2`, limit, offset)
+		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, published_at, updated_at, first_seen, last_polled
+		 FROM viral_comments
+		 WHERE status = 'available'
+		   AND published_at >= now() - interval '5 days'
+		 ORDER BY velocity DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +208,7 @@ func (s *Store) ListAvailableComments(ctx context.Context, limit, offset int) ([
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.ViralComment, error) {
 		var vc models.ViralComment
 		err := row.Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
-			&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+			&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.PublishedAt, &vc.UpdatedAt, &vc.FirstSeen, &vc.LastPolled)
 		return vc, err
 	})
 }
@@ -211,10 +216,10 @@ func (s *Store) ListAvailableComments(ctx context.Context, limit, offset int) ([
 func (s *Store) GetViralCommentByID(ctx context.Context, id uuid.UUID) (*models.ViralComment, error) {
 	vc := &models.ViralComment{}
 	err := s.Pool.QueryRow(ctx,
-		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
+		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, published_at, updated_at, first_seen, last_polled
 		 FROM viral_comments WHERE id = $1`, id,
 	).Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
-		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.PublishedAt, &vc.UpdatedAt, &vc.FirstSeen, &vc.LastPolled)
 	if err != nil {
 		return nil, err
 	}
@@ -224,10 +229,10 @@ func (s *Store) GetViralCommentByID(ctx context.Context, id uuid.UUID) (*models.
 func (s *Store) GetViralCommentByCommentID(ctx context.Context, commentID string) (*models.ViralComment, error) {
 	vc := &models.ViralComment{}
 	err := s.Pool.QueryRow(ctx,
-		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
+		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, published_at, updated_at, first_seen, last_polled
 		 FROM viral_comments WHERE comment_id = $1`, commentID,
 	).Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
-		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+		&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.PublishedAt, &vc.UpdatedAt, &vc.FirstSeen, &vc.LastPolled)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +241,7 @@ func (s *Store) GetViralCommentByCommentID(ctx context.Context, commentID string
 
 func (s *Store) ListCommentsByAuthorChannel(ctx context.Context, authorChannelID string) ([]models.ViralComment, error) {
 	rows, err := s.Pool.Query(ctx,
-		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, first_seen, last_polled
+		`SELECT id, video_id, comment_id, author_channel_id, author_display_name, original_text, like_count, prev_like_count, velocity, status, published_at, updated_at, first_seen, last_polled
 		 FROM viral_comments WHERE author_channel_id = $1 ORDER BY velocity DESC`, authorChannelID)
 	if err != nil {
 		return nil, err
@@ -245,7 +250,7 @@ func (s *Store) ListCommentsByAuthorChannel(ctx context.Context, authorChannelID
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (models.ViralComment, error) {
 		var vc models.ViralComment
 		err := row.Scan(&vc.ID, &vc.VideoID, &vc.CommentID, &vc.AuthorChannelID, &vc.AuthorDisplayName, &vc.OriginalText,
-			&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.FirstSeen, &vc.LastPolled)
+			&vc.LikeCount, &vc.PrevLikeCount, &vc.Velocity, &vc.Status, &vc.PublishedAt, &vc.UpdatedAt, &vc.FirstSeen, &vc.LastPolled)
 		return vc, err
 	})
 }

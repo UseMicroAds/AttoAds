@@ -99,6 +99,8 @@ type ViralComment struct {
 	PrevLikeCount     int           `json:"prev_like_count"`
 	Velocity          float64       `json:"velocity"`
 	Status            CommentStatus `json:"status"`
+	PublishedAt       *time.Time    `json:"published_at"`
+	UpdatedAt         *time.Time    `json:"updated_at"`
 	FirstSeen         time.Time     `json:"first_seen"`
 	LastPolled        time.Time     `json:"last_polled"`
 }
