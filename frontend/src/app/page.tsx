@@ -1,8 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
+import { siteConfig } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: siteConfig.title,
+  description: siteConfig.description,
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default function HomePage() {
   return (

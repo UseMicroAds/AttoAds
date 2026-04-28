@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
+import { siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Terms of Service | AttoAds",
   description:
     "The terms that govern advertiser and commenter use of AttoAds.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: `Terms of Service | ${siteConfig.name}`,
+    description:
+      "The terms that govern advertiser and commenter use of AttoAds.",
+    url: "/terms",
+  },
 };
 
 const sections = [
