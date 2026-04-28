@@ -21,14 +21,13 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/AttoAds-logo.png"
+            src="/attoads-logo-with-text.svg"
             alt="AttoAds logo"
-            width={40}
+            width={120}
             height={40}
-            className="h-10 w-10 rounded-full object-cover"
+            className="h-10 w-auto"
             priority
           />
-          <span className="text-xl font-bold tracking-tight">AttoAds</span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

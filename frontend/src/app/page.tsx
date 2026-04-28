@@ -8,11 +8,11 @@ export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-center gap-8 pt-24 text-center">
       <Image
-        src="/AttoAds-logo.png"
+        src="/attoads-logo-with-text.svg"
         alt="AttoAds logo"
         width={160}
         height={160}
-        className="h-32 w-32 rounded-3xl object-cover shadow-sm sm:h-40 sm:w-40"
+        className="h-32 w-32 shadow-sm sm:h-40 sm:w-40"
         priority
       />
       <h1 className="max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">
