@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
-import {MicroAdsEscrow} from "../src/MicroAdsEscrow.sol";
+import {AttoAdsEscrow} from "../src/AttoAdsEscrow.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
 
-contract MicroAdsEscrowTest is Test {
-    MicroAdsEscrow public escrow;
+contract AttoAdsEscrowTest is Test {
+    AttoAdsEscrow public escrow;
     MockUSDC public usdc;
 
     address owner = address(this);
@@ -19,7 +19,7 @@ contract MicroAdsEscrowTest is Test {
 
     function setUp() public {
         usdc = new MockUSDC();
-        escrow = new MicroAdsEscrow(address(usdc), operator);
+        escrow = new AttoAdsEscrow(address(usdc), operator);
 
         usdc.mint(advertiser, 1000e6);
     }
@@ -54,7 +54,7 @@ contract MicroAdsEscrowTest is Test {
         vm.stopPrank();
 
         vm.prank(advertiser);
-        vm.expectRevert(MicroAdsEscrow.NotOperator.selector);
+        vm.expectRevert(AttoAdsEscrow.NotOperator.selector);
         escrow.release(dealId, campaignId, commenter, 35e6);
     }
 
@@ -65,7 +65,7 @@ contract MicroAdsEscrowTest is Test {
         vm.stopPrank();
 
         vm.prank(operator);
-        vm.expectRevert(MicroAdsEscrow.InsufficientEscrow.selector);
+        vm.expectRevert(AttoAdsEscrow.InsufficientEscrow.selector);
         escrow.release(dealId, campaignId, commenter, 100e6);
     }
 
@@ -92,7 +92,7 @@ contract MicroAdsEscrowTest is Test {
         vm.stopPrank();
 
         vm.prank(commenter);
-        vm.expectRevert(MicroAdsEscrow.NotAdvertiser.selector);
+        vm.expectRevert(AttoAdsEscrow.NotAdvertiser.selector);
         escrow.refund(campaignId);
     }
 
@@ -106,7 +106,7 @@ contract MicroAdsEscrowTest is Test {
         escrow.refund(campaignId);
 
         vm.prank(advertiser);
-        vm.expectRevert(MicroAdsEscrow.AlreadyRefunded.selector);
+        vm.expectRevert(AttoAdsEscrow.AlreadyRefunded.selector);
         escrow.refund(campaignId);
     }
 
@@ -118,7 +118,7 @@ contract MicroAdsEscrowTest is Test {
 
     function test_set_operator_reverts_not_owner() public {
         vm.prank(advertiser);
-        vm.expectRevert(MicroAdsEscrow.NotOwner.selector);
+        vm.expectRevert(AttoAdsEscrow.NotOwner.selector);
         escrow.setOperator(advertiser);
     }
 }

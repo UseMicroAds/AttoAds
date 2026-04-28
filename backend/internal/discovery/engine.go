@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/models"
-	"github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/youtube"
 )
 
 type Engine struct {

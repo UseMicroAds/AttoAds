@@ -4,10 +4,10 @@
 
 SHELL := /bin/bash
 
-DB_URL := postgres://microads:microads_dev@localhost:5432/microads?sslmode=disable
+DB_URL := postgres://attoads:attoads_dev@localhost:5432/attoads?sslmode=disable
 
 help:
-	@echo "MicroAds developer commands"
+	@echo "AttoAds developer commands"
 	@echo ""
 	@echo "Quick start:"
 	@echo "  make start            Copy envs, start DB/Redis, run migrations"

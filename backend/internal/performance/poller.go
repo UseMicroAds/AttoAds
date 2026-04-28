@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/microads/microads-backend/internal/db"
-	ytclient "github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/db"
+	ytclient "github.com/attoads/attoads-backend/internal/youtube"
 )
 
 type Poller struct {

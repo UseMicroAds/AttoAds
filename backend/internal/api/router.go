@@ -6,10 +6,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/microads/microads-backend/internal/auth"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/models"
-	ytclient "github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/auth"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/models"
+	ytclient "github.com/attoads/attoads-backend/internal/youtube"
 	"golang.org/x/oauth2"
 )
 

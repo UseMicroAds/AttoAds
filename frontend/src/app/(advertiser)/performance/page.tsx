@@ -199,7 +199,12 @@ export default function PerformancePage() {
                               }}
                             />
                             <Tooltip
-                              formatter={(value: number) => [value.toFixed(2), "Velocity"]}
+                              formatter={(value) => [
+                                typeof value === "number"
+                                  ? value.toFixed(2)
+                                  : String(value ?? ""),
+                                "Velocity",
+                              ]}
                               labelFormatter={(label) => `Time: ${label}`}
                             />
                             <Line

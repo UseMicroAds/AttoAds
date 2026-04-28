@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microads/microads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/models"
 )
 
 // ParseTakeoutZip opens the ZIP at filePath and extracts YouTube comments from known Takeout layouts.

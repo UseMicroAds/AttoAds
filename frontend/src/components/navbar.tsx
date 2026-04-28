@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,7 +20,14 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight">MicroAds</span>
+          <Image
+            src="/attoads-logo-with-text.svg"
+            alt="AttoAds logo"
+            width={120}
+            height={40}
+            className="h-10 w-auto"
+            priority
+          />
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

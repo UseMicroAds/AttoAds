@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -22,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function MyCommentsTestPage() {
+function MyCommentsTestContent() {
   const filterChannelId = "UCf7PZSTHrz2c5b8TAxYryZw";
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -663,5 +663,19 @@ export default function MyCommentsTestPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function MyCommentsTestPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-8 text-center text-sm text-muted-foreground">
+          Loading comments test page...
+        </div>
+      }
+    >
+      <MyCommentsTestContent />
+    </Suspense>
   );
 }

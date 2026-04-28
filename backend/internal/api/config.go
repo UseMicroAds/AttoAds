@@ -23,7 +23,7 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
 		Port:            getEnv("PORT", "8080"),
-		DatabaseURL:     getEnv("DATABASE_URL", "postgres://microads:microads_dev@localhost:5432/microads?sslmode=disable"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://attoads:attoads_dev@localhost:5432/attoads?sslmode=disable"),
 		RedisURL:        getEnv("REDIS_URL", "redis://localhost:6379/0"),
 		JWTSecret:       getEnv("JWT_SECRET", ""),
 		GoogleClientID:  getEnv("GOOGLE_CLIENT_ID", ""),

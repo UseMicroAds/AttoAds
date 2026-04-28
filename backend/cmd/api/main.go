@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/microads/microads-backend/internal/api"
-	"github.com/microads/microads-backend/internal/auth"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/api"
+	"github.com/attoads/attoads-backend/internal/auth"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/youtube"
 )
 
 func main() {

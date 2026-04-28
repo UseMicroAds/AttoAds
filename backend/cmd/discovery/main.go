@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/discovery"
-	"github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/discovery"
+	"github.com/attoads/attoads-backend/internal/youtube"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
-	dbURL := envOrDefault("DATABASE_URL", "postgres://microads:microads_dev@localhost:5432/microads?sslmode=disable")
+	dbURL := envOrDefault("DATABASE_URL", "postgres://attoads:attoads_dev@localhost:5432/attoads?sslmode=disable")
 	redisURL := envOrDefault("REDIS_URL", "redis://localhost:6379/0")
 	apiKey := os.Getenv("YOUTUBE_API_KEY")
 	if apiKey == "" {
