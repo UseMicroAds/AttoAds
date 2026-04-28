@@ -284,7 +284,7 @@ const html = `<!doctype html>
           <h2>Contact</h2>
           <p>
             For privacy questions or data deletion requests, contact AttoAds at
-            <a href="mailto:support@attoads.app">support@attoads.app</a>.
+            <a href="mailto:support@attoads.com">support@attoads.com</a>.
           </p>
         </section>
       </article>

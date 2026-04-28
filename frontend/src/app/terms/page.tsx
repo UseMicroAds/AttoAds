@@ -117,7 +117,7 @@ const sections = [
   {
     title: "Contact",
     paragraphs: [
-      "For questions about these terms, contact AttoAds at support@attoads.app.",
+      "For questions about these terms, contact AttoAds at support@attoads.com.",
     ],
   },
 ];
