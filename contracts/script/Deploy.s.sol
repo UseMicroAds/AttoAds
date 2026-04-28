@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
-import {MicroAdsEscrow} from "../src/MicroAdsEscrow.sol";
+import {AttoAdsEscrow} from "../src/AttoAdsEscrow.sol";
 
 contract DeployScript is Script {
     // USDC on Base Sepolia
@@ -12,9 +12,9 @@ contract DeployScript is Script {
         address operator = vm.envAddress("OPERATOR_ADDRESS");
 
         vm.startBroadcast();
-        MicroAdsEscrow escrow = new MicroAdsEscrow(USDC_BASE_SEPOLIA, operator);
+        AttoAdsEscrow escrow = new AttoAdsEscrow(USDC_BASE_SEPOLIA, operator);
         vm.stopBroadcast();
 
-        console.log("MicroAdsEscrow deployed at:", address(escrow));
+        console.log("AttoAdsEscrow deployed at:", address(escrow));
     }
 }

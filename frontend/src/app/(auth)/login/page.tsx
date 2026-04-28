@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div className="flex min-h-[60vh] items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign in to MicroAds</CardTitle>
+          <CardTitle className="text-2xl">Sign in to AttoAds</CardTitle>
           <CardDescription>
             Connect your YouTube account to get started
           </CardDescription>
@@ -71,7 +71,7 @@ export default function LoginPage() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            By signing in, you grant MicroAds permission to manage YouTube
+            By signing in, you grant AttoAds permission to manage YouTube
             comments on your behalf.
           </p>
         </CardContent>

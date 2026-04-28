@@ -1,4 +1,4 @@
-# MicroAds — Viral Comment Monetization Platform
+# AttoAds — Viral Comment Monetization Platform
 
 A micro-sponsorship marketplace connecting brands with YouTube's top commenters. Advertisers pay for plain-text shoutouts on viral comments. Commenters get paid instantly in USDC on Base.
 
@@ -46,7 +46,7 @@ docker compose up -d
 
 ```bash
 # Install golang-migrate: https://github.com/golang-migrate/migrate
-migrate -path backend/migrations -database "postgres://microads:microads_dev@localhost:5432/microads?sslmode=disable" up
+migrate -path backend/migrations -database "postgres://attoads:attoads_dev@localhost:5432/attoads?sslmode=disable" up
 ```
 
 ### 3. Configure environment
@@ -79,7 +79,7 @@ cd backend && go run ./cmd/performance  # Deal performance metrics (optional; us
 
 ## Smart Contract
 
-The `MicroAdsEscrow` contract on Base holds USDC for campaigns and bounties.
+The `AttoAdsEscrow` contract on Base holds USDC for campaigns and bounties.
 
 ```bash
 cd contracts

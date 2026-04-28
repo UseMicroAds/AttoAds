@@ -1,4 +1,4 @@
-module github.com/microads/microads-backend
+module github.com/attoads/attoads-backend
 
 go 1.25.0
 

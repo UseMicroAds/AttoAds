@@ -3,7 +3,7 @@
     {
       "hash": "0xe34aab9d2262d1f2ff97eb741b10039d2825bf6ad6f4f93b737f1d719686f136",
       "transactionType": "CREATE",
-      "contractName": "MicroAdsEscrow",
+      "contractName": "AttoAdsEscrow",
       "contractAddress": "0x9fc3878aef4008f1f4bb93fe4ef8d9a33c0e69db",
       "function": null,
       "arguments": [

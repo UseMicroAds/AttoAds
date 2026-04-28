@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/microads/microads-backend/internal/auth"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/auth"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/models"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/option"
 	yt "google.golang.org/api/youtube/v3"

@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/microads/microads-backend/internal/auth"
-	"github.com/microads/microads-backend/internal/dataportability"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/models"
-	"github.com/microads/microads-backend/internal/takeout"
+	"github.com/attoads/attoads-backend/internal/auth"
+	"github.com/attoads/attoads-backend/internal/dataportability"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/takeout"
 	"golang.org/x/oauth2"
 )
 
@@ -33,7 +33,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
-	dbURL := envOrDefault("DATABASE_URL", "postgres://microads:microads_dev@localhost:5432/microads?sslmode=disable")
+	dbURL := envOrDefault("DATABASE_URL", "postgres://attoads:attoads_dev@localhost:5432/attoads?sslmode=disable")
 	redisURL := envOrDefault("REDIS_URL", "redis://localhost:6379/0")
 
 	ctx, cancel := context.WithCancel(context.Background())

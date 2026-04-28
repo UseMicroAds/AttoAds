@@ -4,13 +4,13 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: microads
-      POSTGRES_PASSWORD: microads_dev
-      POSTGRES_DB: microads
+      POSTGRES_USER: attoads
+      POSTGRES_PASSWORD: attoads_dev
+      POSTGRES_DB: attoads
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U microads"]
+      test: ["CMD-SHELL", "pg_isready -U attoads"]
       interval: 5s
       timeout: 3s
       retries: 5

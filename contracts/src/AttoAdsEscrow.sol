@@ -3,11 +3,11 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "./interfaces/IERC20.sol";
 
-/// @title MicroAdsEscrow
+/// @title AttoAdsEscrow
 /// @notice Holds USDC deposits for advertising campaigns and releases funds
 ///         to commenters once the backend verification worker confirms the
 ///         comment edit. Only the designated operator can trigger releases.
-contract MicroAdsEscrow {
+contract AttoAdsEscrow {
     IERC20 public immutable usdc;
     address public operator;
     address public owner;

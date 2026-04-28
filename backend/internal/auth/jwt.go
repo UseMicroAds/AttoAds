@@ -9,7 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/microads/microads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/models"
 )
 
 type contextKey string
@@ -31,7 +31,7 @@ func GenerateToken(secret string, userID uuid.UUID, email string, role models.Us
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			Issuer:    "microads",
+			Issuer:    "attoads",
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

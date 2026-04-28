@@ -6,7 +6,7 @@ const walletConnectProjectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "";
 
 export const config = getDefaultConfig({
-  appName: "MicroAds",
+  appName: "AttoAds",
   projectId: walletConnectProjectId,
   ssr: true,
   chains: [baseSepolia],

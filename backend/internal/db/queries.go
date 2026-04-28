@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/microads/microads-backend/internal/models"
+	"github.com/attoads/attoads-backend/internal/models"
 )
 
 // --- Users ---

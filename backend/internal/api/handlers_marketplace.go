@@ -10,10 +10,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/microads/microads-backend/internal/auth"
-	"github.com/microads/microads-backend/internal/db"
-	"github.com/microads/microads-backend/internal/models"
-	ytclient "github.com/microads/microads-backend/internal/youtube"
+	"github.com/attoads/attoads-backend/internal/auth"
+	"github.com/attoads/attoads-backend/internal/db"
+	"github.com/attoads/attoads-backend/internal/models"
+	ytclient "github.com/attoads/attoads-backend/internal/youtube"
 )
 
 type MarketplaceHandlers struct {
@@ -50,7 +50,7 @@ func (h *MarketplaceHandlers) ListComments(w http.ResponseWriter, r *http.Reques
 
 	rows, err := h.Store.Pool.Query(
 		r.Context(),
-		`SELECT vc.id, tv.video_id, vc.comment_id, vc.author_channel_id, vc.author_display_name,
+		`SELECT vc.id, tv.video_id, tv.title, tv.video_category, vc.comment_id, vc.author_channel_id, vc.author_display_name,
 		        vc.original_text, vc.like_count, vc.velocity, vc.status, vc.published_at, vc.updated_at, vc.first_seen
 		 FROM viral_comments vc
 		 JOIN trending_videos tv ON tv.id = vc.video_id

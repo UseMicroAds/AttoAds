@@ -1,17 +1,26 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-center gap-8 pt-24 text-center">
+      <Image
+        src="/AttoAds-logo.png"
+        alt="AttoAds logo"
+        width={160}
+        height={160}
+        className="h-32 w-32 rounded-3xl object-cover shadow-sm sm:h-40 sm:w-40"
+        priority
+      />
       <h1 className="max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">
         Turn viral comments into
         <span className="text-primary"> revenue</span>
       </h1>
       <p className="max-w-xl text-lg text-muted-foreground">
-        MicroAds connects brands with YouTube&apos;s top commenters. Advertisers
+        AttoAds connects brands with YouTube&apos;s top commenters. Advertisers
         get high-visibility placements. Commenters get paid instantly in USDC.
       </p>
       <div className="flex gap-4">
